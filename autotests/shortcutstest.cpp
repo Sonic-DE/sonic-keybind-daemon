@@ -197,7 +197,7 @@ void ShortcutsTest::testSerialization()
     QCOMPARE(Component::stringFromKeys(QSet<QKeySequence>()), QLatin1String("none"));
 
     QCOMPARE(Component::keysFromString(QLatin1String("")), QSet<QKeySequence>() << QKeySequence());
-    QCOMPARE(Component::stringFromKeys(QSet<QKeySequence>() << QKeySequence()), QLatin1String(""));
+    QCOMPARE(Component::stringFromKeys(QSet<QKeySequence>() << QKeySequence()), QLatin1String("none"));
 
     QCOMPARE(Component::keysFromString(QLatin1String("Ctrl+P")), QSet<QKeySequence>() << QKeySequence(Qt::CTRL | Qt::Key_P));
     QCOMPARE(Component::stringFromKeys(QSet<QKeySequence>() << QKeySequence(Qt::CTRL | Qt::Key_P)), QLatin1String("Ctrl+P"));

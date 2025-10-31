@@ -42,6 +42,10 @@ QString Component::stringFromKeys(const QSet<QKeySequence> &keys)
     QList<QKeySequence> sortedKeys(keys.begin(), keys.end());
     std::sort(sortedKeys.begin(), sortedKeys.end());
 
+    if (keys == QSet{QKeySequence()}) {
+        return QStringLiteral("none");
+    }
+
     QString ret;
     for (const QKeySequence &key : sortedKeys) {
         ret.append(key.toString(QKeySequence::PortableText));
