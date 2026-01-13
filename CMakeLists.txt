@@ -2,14 +2,13 @@ cmake_minimum_required(VERSION 3.16)
 
 project(kglobalacceld)
 
-set(PROJECT_VERSION "6.7.4")
+set(PROJECT_VERSION "6.6.80")
 
 set(QT_MIN_VERSION "6.10.0")
-set(KF6_MIN_VERSION "6.26.0")
+set(KF6_MIN_VERSION "6.22.0")
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include(FeatureSummary)
 find_package(ECM ${KF6_MIN_VERSION}  NO_MODULE)
@@ -119,7 +118,6 @@ ecm_qt_install_logging_categories(
 feature_summary(WHAT ALL FATAL_ON_MISSING_REQUIRED_PACKAGES)
 
 file(GLOB_RECURSE ALL_CLANG_FORMAT_SOURCE_FILES *.cpp *.h *.c)
-list(FILTER ALL_CLANG_FORMAT_SOURCE_FILES EXCLUDE REGEX ".*\\.ccls-cache/.*")
 kde_clang_format(${ALL_CLANG_FORMAT_SOURCE_FILES})
 
 kde_configure_git_pre_commit_hook(CHECKS CLANG_FORMAT)
