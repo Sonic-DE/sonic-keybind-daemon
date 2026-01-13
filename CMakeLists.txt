@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 
 project(kglobalacceld)
 
-set(PROJECT_VERSION "6.6.5")
+set(PROJECT_VERSION "6.6.80")
 
 set(QT_MIN_VERSION "6.10.0")
 set(KF6_MIN_VERSION "6.22.0")
@@ -45,6 +45,7 @@ endif()
 
 find_package(KF6Config ${KF6_MIN_VERSION} REQUIRED)
 find_package(KF6CoreAddons ${KF6_MIN_VERSION} REQUIRED)
+find_package(KF6Crash ${KF6_MIN_VERSION} REQUIRED)
 find_package(KF6DBusAddons ${KF6_MIN_VERSION} REQUIRED)
 find_package(KF6WindowSystem ${KF6_MIN_VERSION} REQUIRED)
 find_package(KF6GlobalAccel ${KF6_MIN_VERSION} REQUIRED)
@@ -77,8 +78,8 @@ ecm_setup_version(PROJECT VARIABLE_PREFIX KGLOBALACCELD
                         SOVERSION 0)
 
 ecm_set_disabled_deprecation_versions(
-    QT 6.11.0
-    KF 6.23.0
+    QT 6.9.0
+    KF 6.16.0
 )
 
 add_subdirectory(src)
