@@ -820,11 +820,11 @@ bool GlobalShortcutsRegistry::registerKey(const QKeySequence &key, GlobalShortcu
         return false;
     }
     if (key.isEmpty()) {
-        qCDebug(KGLOBALACCELD) << shortcut->uniqueName() << ": Key '" << QKeySequence(key).toString() << "' already taken by "
-                               << _active_keys.value(key)->uniqueName() << ".";
+        qCDebug(KGLOBALACCELD) << shortcut->uniqueName() << ": Attempt to register key 0.";
         return false;
     } else if (_active_keys.value(key)) {
-        qCDebug(KGLOBALACCELD) << shortcut->uniqueName() << ": Attempt to register key 0.";
+        qCDebug(KGLOBALACCELD) << shortcut->uniqueName() << ": Key '" << QKeySequence(key).toString() << "' already taken by "
+                               << _active_keys.value(key)->uniqueName() << ".";
         return false;
     }
 
