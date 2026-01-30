@@ -175,9 +175,11 @@ private:
     // ReleasingModifierOnly -> Normal when all keys are released, and when a non-modifier key is pressed
     // Modifier-only shortcuts are triggered in ReleasingModifierOnly state, if all keys are released
     // and the time since the first release is less than some threshold
-    enum { Normal,
-           PressingModifierOnly,
-           ReleasingModifierOnly } m_state = Normal;
+    enum {
+        Normal,
+        PressingModifierOnly,
+        ReleasingModifierOnly
+    } m_state = Normal;
     void resetModifierOnlyState()
     {
         m_state = Normal;

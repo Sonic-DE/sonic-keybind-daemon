@@ -187,7 +187,8 @@ void GlobalShortcutsRegistry::migrateConfig()
 
             const QStringList triplet = value.split(QLatin1Char(','));
             if (triplet.size() != 3) {
-                qCWarning(KGLOBALACCELD, "Not migrating %s in %s because it contains an invalid value: %s (expected a triplet: shortcut,default_shortcut,friendly_name)",
+                qCWarning(KGLOBALACCELD,
+                          "Not migrating %s in %s because it contains an invalid value: %s (expected a triplet: shortcut,default_shortcut,friendly_name)",
                           qPrintable(key),
                           qPrintable(componentName),
                           qPrintable(value));
@@ -224,7 +225,9 @@ void GlobalShortcutsRegistry::migrateConfig()
 
             const QStringList migrateFromParts = migrateFrom.split(QLatin1Char(','));
             if (migrateFromParts.size() != 2) {
-                qCWarning(KGLOBALACCELD, "Skipping X-KDE-Migrate-Shortcut in %s because it contains an invalid value: %s (expected a value with the format: old_component,old_action_name)",
+                qCWarning(KGLOBALACCELD,
+                          "Skipping X-KDE-Migrate-Shortcut in %s because it contains an invalid value: %s (expected a value with the format: "
+                          "old_component,old_action_name)",
                           qPrintable(fileName),
                           qPrintable(migrateFrom));
                 return;
@@ -237,7 +240,8 @@ void GlobalShortcutsRegistry::migrateConfig()
 
             const QStringList shortcutTriple = _config.group(migrateFromParts[0]).readEntry<QStringList>(migrateFromParts[1], QStringList());
             if (shortcutTriple.size() != 3) {
-                qCWarning(KGLOBALACCELD, "Not migrating %s in %s because X-KDE-Migrate-Shortcut=%s points to an invalid shortcut entry",
+                qCWarning(KGLOBALACCELD,
+                          "Not migrating %s in %s because X-KDE-Migrate-Shortcut=%s points to an invalid shortcut entry",
                           qPrintable(actionName),
                           qPrintable(fileName),
                           qPrintable(migrateFrom));

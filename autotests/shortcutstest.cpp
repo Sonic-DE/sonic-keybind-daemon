@@ -6,9 +6,9 @@
 
 #include <QTest>
 
+#include "component.h"
 #include "dummy.h"
 #include "kglobalacceld.h"
-#include "component.h"
 
 #include <QPluginLoader>
 #include <QSignalSpy>
