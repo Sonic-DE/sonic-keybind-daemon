@@ -70,7 +70,7 @@ public Q_SLOTS:
     Q_SCRIPTABLE QList<QStringList> allActionsForComponent(const QStringList &actionId) const;
 
 #if KGLOBALACCELD_ENABLE_DEPRECATED_SINCE(5, 90)
-    KGLOBALACCELD_DEPRECATED_VERSION(5, 90, "Use actionList(const QKeySequence&, int) instead.")
+    KGLOBALACCELD_DEPRECATED_VERSION(5, 90, "Use actionList(const QKeySequence &) instead.")
     Q_SCRIPTABLE QStringList action(int key) const;
 #endif
     Q_SCRIPTABLE QStringList actionList(const QKeySequence &key) const;
@@ -120,7 +120,7 @@ public Q_SLOTS:
 
 #if KGLOBALACCELD_ENABLE_DEPRECATED_SINCE(4, 3)
     //! @deprecated Since 4.3, use KGlobalAccelD::unregister
-    KGLOBALACCELD_DEPRECATED_VERSION(4, 3, "Use KGlobalAccelD::unregister(const QString&, const QString&")
+    KGLOBALACCELD_DEPRECATED_VERSION(4, 3, "Use KGlobalAccelD::unregister(const QString &, const QString &) instead.")
     Q_SCRIPTABLE void unRegister(const QStringList &actionId);
 #endif
 
@@ -133,9 +133,9 @@ public Q_SLOTS:
      * If there is more than one shortcut they are guaranteed to be from the
      * same component but different contexts. All shortcuts are searched.
      *
-     * @deprecated Since 5.90, use globalShortcutsByKey(const QKeySequence &, int) instead.
+     * @deprecated Since 5.90, use globalShortcutsByKey(const QKeySequence &, KGlobalAccel::MatchType) instead.
      */
-    KGLOBALACCELD_DEPRECATED_VERSION(5, 90, "Use globalShortcutsByKey(const QKeySequence &, int) instead.")
+    KGLOBALACCELD_DEPRECATED_VERSION(5, 90, "Use globalShortcutsByKey(const QKeySequence &, KGlobalAccel::MatchType) instead.")
     Q_SCRIPTABLE QList<KGlobalShortcutInfo> getGlobalShortcutsByKey(int key) const;
 #endif
 
