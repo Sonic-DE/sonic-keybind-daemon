@@ -72,8 +72,8 @@ KGlobalAccelImpl::KGlobalAccelImpl(QObject *parent)
     // on Mod+Click, or Mod+Key; release Key; release Mod
     // We also handle the events here, instead of in the nativeEventFilter
     m_display = XOpenDisplay(nullptr);
-    auto connection = xcb_connect(XDisplayString((Display *)m_display), nullptr);
-    auto context = xcb_generate_id(connection);
+    m_connection = xcb_connect(XDisplayString((Display *)m_display), nullptr);
+    auto context = xcb_generate_id(m_connection);
     xcb_record_range_t range;
     memset(&range, 0, sizeof(range));
     range.device_events.first = XCB_KEY_PRESS;
@@ -81,25 +81,25 @@ KGlobalAccelImpl::KGlobalAccelImpl(QObject *parent)
     range.core_requests.first = XCB_GRAB_KEYBOARD;
     range.core_requests.last = XCB_UNGRAB_KEYBOARD;
     xcb_record_client_spec_t cs = XCB_RECORD_CS_ALL_CLIENTS;
-    xcb_record_create_context(connection, context, 0, 1, 1, &cs, &range);
-    auto cookie = xcb_record_enable_context(connection, context);
-    xcb_flush(connection);
+    xcb_record_create_context(m_connection, context, 0, 1, 1, &cs, &range);
+    auto cookie = xcb_record_enable_context(m_connection, context);
+    xcb_flush(m_connection);
 
     m_xrecordCookieSequence = cookie.sequence;
 
-    auto m_notifier = new QSocketNotifier(xcb_get_file_descriptor(connection), QSocketNotifier::Read, this);
-    connect(m_notifier, &QSocketNotifier::activated, this, [this, connection] {
+    auto m_notifier = new QSocketNotifier(xcb_get_file_descriptor(m_connection), QSocketNotifier::Read, this);
+    connect(m_notifier, &QSocketNotifier::activated, this, [this] {
         xcb_generic_event_t *event;
-        while ((event = xcb_poll_for_event(connection))) {
+        while ((event = xcb_poll_for_event(m_connection))) {
             std::free(event);
         }
 
         xcb_record_enable_context_reply_t *reply = nullptr;
         xcb_generic_error_t *error = nullptr;
-        while (m_xrecordCookieSequence && xcb_poll_for_reply(connection, m_xrecordCookieSequence, (void **)&reply, &error)) {
+        while (m_xrecordCookieSequence && xcb_poll_for_reply(m_connection, m_xrecordCookieSequence, (void **)&reply, &error)) {
             // xcb_poll_for_reply may set both reply and error to null if connection has error.
             // break if xcb_connection has error, no point to continue anyway.
-            if (xcb_connection_has_error(connection)) {
+            if (xcb_connection_has_error(m_connection)) {
                 break;
             }
 
@@ -191,6 +191,7 @@ KGlobalAccelImpl::KGlobalAccelImpl(QObject *parent)
 
 KGlobalAccelImpl::~KGlobalAccelImpl()
 {
+    xcb_disconnect(m_connection);
     XCloseDisplay((Display *)m_display);
     if (m_keySymbols) {
         xcb_key_symbols_free(m_keySymbols);

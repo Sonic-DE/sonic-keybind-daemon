@@ -14,6 +14,7 @@
 #include <QObject>
 
 struct xcb_key_press_event_t;
+struct xcb_connection_t;
 typedef xcb_key_press_event_t xcb_key_release_event_t;
 struct xcb_button_press_event_t;
 typedef struct _XCBKeySymbols xcb_key_symbols_t;
@@ -69,6 +70,7 @@ private:
     xcb_key_symbols_t *m_keySymbols;
     uint8_t m_xkb_first_event;
     void *m_display;
+    xcb_connection_t *m_connection;
     unsigned int m_xrecordCookieSequence;
     QTimer *m_remapTimer;
     bool m_keyboardGrabbed = false;
