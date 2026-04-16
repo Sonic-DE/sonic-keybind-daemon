@@ -23,6 +23,7 @@
 #include <QTimer>
 
 #include <chrono>
+#include <memory>
 
 #include "kglobalaccel_export.h"
 #include "shortcutkeystate.h"
@@ -54,6 +55,12 @@ class KGLOBALACCEL_EXPORT GlobalShortcutsRegistry : public QObject
 
 public:
     GlobalShortcutsRegistry();
+
+    /**
+     * Takes ownership of a supplied backend instead of loading a platform plugin.
+     * An empty backend selects the normal platform plugin loading path.
+     */
+    explicit GlobalShortcutsRegistry(std::unique_ptr<KGlobalAccelInterface> interface);
     ~GlobalShortcutsRegistry() override;
 
     /**

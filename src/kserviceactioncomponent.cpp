@@ -137,6 +137,7 @@ void KServiceActionComponent::writeSettings(KConfigGroup &config, KConfigGroup &
 
             contextStateGroup.writeEntry(shortcut->uniqueName(), shortcut->serial());
         }
+        writeInverseActions(context, contextGroup);
     }
 }
 
@@ -164,6 +165,19 @@ void KServiceActionComponent::loadSettings(const KConfigGroup &configGroup, cons
         const quint64 serial = stateGroup.readEntry<uint64_t>("_launch", 0);
         GlobalShortcut *shortcut = registerShortcut(QStringLiteral("_launch"), m_service->name(), shortcutString, defaultShortcutString, serial);
         shortcut->setIsPresent(true);
+    }
+
+    // Include the launch shortcut before loading pairs that may refer to it.
+    for (const KServiceAction& action : actions) {
+        const QStringList entry = action.property<QStringList>(QStringLiteral("X-KDE-InverseAction"));
+        if (!entry.isEmpty()) {
+            loadInverseAction(action.name(), entry);
+        }
+    }
+    const KConfigGroup inverseActionGroup(&configGroup, QStringLiteral("$InverseAction"));
+    const auto inverseActionKeys = inverseActionGroup.keyList();
+    for (const QString& key : inverseActionKeys) {
+        loadInverseAction(key, inverseActionGroup.readEntry(key, QStringList()));
     }
 }
 

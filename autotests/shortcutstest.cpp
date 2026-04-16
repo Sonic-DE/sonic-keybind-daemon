@@ -8,14 +8,47 @@
 
 #include "component.h"
 #include "dummy.h"
+#include "globalshortcut.h"
+#include "globalshortcutsregistry.h"
 #include "kglobalacceld.h"
 
+#include <KConfig>
+#include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QPluginLoader>
 #include <QSignalSpy>
 #include <QStandardPaths>
+#include <QTemporaryDir>
+#include <QTemporaryFile>
 
 Q_IMPORT_PLUGIN(KGlobalAccelImpl)
+
+class RegistryTestBackend : public KGlobalAccelInterface {
+public:
+    explicit RegistryTestBackend(bool* destroyed = nullptr)
+        : KGlobalAccelInterface(nullptr)
+        , m_destroyed(destroyed)
+    {
+    }
+
+    ~RegistryTestBackend() override
+    {
+        if (m_destroyed) {
+            *m_destroyed = true;
+        }
+    }
+
+    bool grabKey(int key, bool grab) override
+    {
+        Q_UNUSED(key);
+        Q_UNUSED(grab);
+        return true;
+    }
+
+private:
+    bool* m_destroyed;
+};
 
 class ShortcutsTest : public QObject
 {
@@ -35,6 +68,12 @@ private Q_SLOTS:
     void testBacktab();
     void testEmptyShortcut_data();
     void testEmptyShortcut();
+    void testRegistryBackendIsolation();
+    void testInverseActionLifecycle();
+    void testInverseActionPersistence_data();
+    void testInverseActionPersistence();
+    void testInverseServiceActions_data();
+    void testInverseServiceActions();
 
 private:
     void sendKeyCombination(QKeyCombination keyCombination, ShortcutKeyState state);
@@ -465,6 +504,152 @@ void ShortcutsTest::testEmptyShortcut()
     QCOMPARE(m_globalacceld->defaultShortcutKeys(actionId), expectedKeys);
     QCOMPARE(Component::keysFromString(Component::stringFromKeys(expectedKeys)), expectedKeys);
     QVERIFY(m_globalacceld->unregister(actionId[0], actionId[1]));
+}
+
+void ShortcutsTest::testRegistryBackendIsolation()
+{
+    bool backendDestroyed = false;
+    QObject* mainRegistry = m_interface->parent();
+    {
+        auto backend = std::make_unique<RegistryTestBackend>(&backendDestroyed);
+        auto* backendPtr = backend.get();
+        GlobalShortcutsRegistry registry(std::move(backend));
+        QCOMPARE(registry.interface(), static_cast<KGlobalAccelInterface*>(backendPtr));
+        QCOMPARE(backendPtr->parent(), static_cast<QObject*>(&registry));
+        QVERIFY(!backendDestroyed);
+        QCOMPARE(m_interface->parent(), mainRegistry);
+        QCOMPARE(KGlobalAccelImpl::instance(), m_interface);
+    }
+    QVERIFY(backendDestroyed);
+    QCOMPARE(m_interface->parent(), mainRegistry);
+    QCOMPARE(KGlobalAccelImpl::instance(), m_interface);
+
+    auto action = std::make_unique<QAction>();
+    action->setObjectName(QStringLiteral("backend-isolation-action"));
+    const QKeyCombination key = Qt::CTRL | Qt::Key_F11;
+    QVERIFY(KGlobalAccel::setGlobalShortcut(action.get(), QKeySequence(key)));
+    QSignalSpy triggered(action.get(), &QAction::triggered);
+    sendKeyCombinationPressAndRelease(key);
+    QVERIFY(triggered.wait());
+    m_globalaccel->removeAllShortcuts(action.get());
+}
+
+void ShortcutsTest::testInverseActionLifecycle()
+{
+    const QString component = QStringLiteral("inverse-lifecycle-test");
+    for (const QString& action : {QStringLiteral("forward"), QStringLiteral("backward"), QStringLiteral("other")}) {
+        const QStringList actionId{component, action, component, action};
+        m_globalacceld->doRegister(actionId);
+        m_globalacceld->setShortcutKeys(actionId, {}, KGlobalAccelD::NoAutoloading | KGlobalAccelD::SetPresent);
+    }
+    QVERIFY(!m_globalacceld->setInverseShortcutActions(component, QStringLiteral("forward"), QStringLiteral("missing"), 0));
+    QVERIFY(!m_globalacceld->setInverseShortcutActions(component, QStringLiteral("forward"), QStringLiteral("backward"), 1));
+    QVERIFY(m_globalacceld->setInverseShortcutActions(component, QStringLiteral("forward"), QStringLiteral("backward"), 0));
+    QVERIFY(m_globalacceld->setInverseShortcutActions(component, QStringLiteral("backward"), QStringLiteral("forward"), 0));
+    QVERIFY(!m_globalacceld->setInverseShortcutActions(component, QStringLiteral("forward"), QStringLiteral("other"), 0));
+    QVERIFY(m_globalacceld->unregister(component, QStringLiteral("forward")));
+    const bool reassigned = m_globalacceld->setInverseShortcutActions(component, QStringLiteral("backward"), QStringLiteral("other"), 0);
+    QVERIFY(m_globalacceld->unregister(component, QStringLiteral("backward")));
+    QVERIFY(m_globalacceld->unregister(component, QStringLiteral("other")));
+    QVERIFY(reassigned);
+}
+
+void ShortcutsTest::testInverseActionPersistence_data()
+{
+    QTest::addColumn<QString>("context");
+    QTest::addColumn<QString>("partner");
+    QTest::addColumn<bool>("fresh");
+    QTest::newRow("default") << QStringLiteral("default") << QStringLiteral("backward") << false;
+    QTest::newRow("named-context") << QStringLiteral("workspace") << QStringLiteral("backward") << false;
+    QTest::newRow("session-partner") << QStringLiteral("default") << QStringLiteral("_k_session:backward") << false;
+    QTest::newRow("fresh-partner") << QStringLiteral("default") << QStringLiteral("backward") << true;
+}
+
+void ShortcutsTest::testInverseActionPersistence()
+{
+    QFETCH(QString, context);
+    QFETCH(QString, partner);
+    QFETCH(bool, fresh);
+    QTemporaryDir directory;
+    QVERIFY(directory.isValid());
+    KConfig config(directory.filePath(QStringLiteral("shortcutsrc")), KConfig::SimpleConfig);
+    KConfig state(directory.filePath(QStringLiteral("staterc")), KConfig::SimpleConfig);
+    KConfigGroup configGroup(&config, QStringLiteral("inverse-persistence"));
+    KConfigGroup stateGroup(&state, QStringLiteral("inverse-persistence"));
+    GlobalShortcutsRegistry registry(std::make_unique<RegistryTestBackend>());
+    Component component(QStringLiteral("inverse-persistence"), QString(), &registry);
+    if (context != QLatin1String("default")) {
+        QVERIFY(component.createGlobalShortcutContext(context));
+        QVERIFY(component.activateGlobalShortcutContext(context));
+    }
+    component.registerShortcut(QStringLiteral("forward"), QString(), QStringLiteral("none"), QStringLiteral("none"), 1);
+    auto* backward = component.registerShortcut(partner, QString(), QStringLiteral("none"), QStringLiteral("none"), 2);
+    backward->_isFresh = fresh;
+    component.loadInverseAction(QStringLiteral("forward"), {partner});
+    QCOMPARE(backward->_inverseActionUniqueName, QStringLiteral("forward"));
+    component.writeSettings(configGroup, stateGroup);
+
+    const KConfigGroup contextGroup = context == QLatin1String("default") ? configGroup : configGroup.group(context);
+    const bool persistent = !fresh && !partner.startsWith(QLatin1String("_k_session:"));
+    QCOMPARE(contextGroup.group(QStringLiteral("$InverseAction")).keyList().size(), persistent ? 1 : 0);
+    Component reloaded(QStringLiteral("inverse-persistence-reloaded"), QString(), &registry);
+    if (context != QLatin1String("default")) {
+        QVERIFY(reloaded.createGlobalShortcutContext(context));
+        QVERIFY(reloaded.activateGlobalShortcutContext(context));
+    }
+    reloaded.loadSettings(contextGroup, stateGroup);
+    const auto* forward = reloaded.getShortcutByName(QStringLiteral("forward"), context);
+    QVERIFY(forward);
+    QCOMPARE(forward->_inverseActionUniqueName, persistent ? partner : QString());
+    if (persistent) {
+        QCOMPARE(reloaded.getShortcutByName(partner, context)->_inverseActionUniqueName, QStringLiteral("forward"));
+    }
+    QVERIFY(Component::isReservedConfigGroupName(QStringLiteral("$InverseAction")));
+}
+
+void ShortcutsTest::testInverseServiceActions_data()
+{
+    QTest::addColumn<bool>("metadata");
+    QTest::newRow("runtime-pair-roundtrip") << false;
+    QTest::newRow("metadata-pair-with-launch") << true;
+}
+
+void ShortcutsTest::testInverseServiceActions()
+{
+    QFETCH(bool, metadata);
+    const QString directory = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + QStringLiteral("/kglobalaccel");
+    QVERIFY(QDir().mkpath(directory));
+    QTemporaryFile desktop(directory + QStringLiteral("/inverse-service-XXXXXX.desktop"));
+    QVERIFY(desktop.open());
+    QByteArray contents = "[Desktop Entry]\nType=Application\nName=Inverse Test\nExec=true\nActions=forward;backward;\n"
+                          "[Desktop Action forward]\nName=Forward\nExec=true\n";
+    if (metadata) {
+        contents += "X-KDE-InverseAction=_launch\n";
+    }
+    contents += "[Desktop Action backward]\nName=Backward\nExec=true\n";
+    QCOMPARE(desktop.write(contents), contents.size());
+    QVERIFY(desktop.flush());
+    const QString componentName = QFileInfo(desktop.fileName()).fileName();
+    GlobalShortcutsRegistry registry(std::make_unique<RegistryTestBackend>());
+    registry.loadSettings();
+    Component* component = registry.getComponent(componentName);
+    QVERIFY(component);
+    const QString partner = metadata ? QStringLiteral("_launch") : QStringLiteral("backward");
+    if (!metadata) {
+        component->loadInverseAction(QStringLiteral("forward"), {partner});
+    }
+    QCOMPARE(component->getShortcutByName(QStringLiteral("forward"))->_inverseActionUniqueName, partner);
+    registry.writeSettings();
+    registry.clear();
+    registry.loadSettings();
+    component = registry.getComponent(componentName);
+    QVERIFY(component);
+    QCOMPARE(component->getShortcutByName(QStringLiteral("forward"))->_inverseActionUniqueName, partner);
+    QCOMPARE(component->getShortcutByName(partner)->_inverseActionUniqueName, QStringLiteral("forward"));
+    for (const QString& action : {QStringLiteral("forward"), QStringLiteral("backward"), QStringLiteral("_launch")}) {
+        component->unregisterShortcut(action);
+    }
+    registry.writeSettings();
 }
 
 QTEST_MAIN(ShortcutsTest)

@@ -276,11 +276,21 @@ void GlobalShortcutsRegistry::migrateConfig()
 }
 
 GlobalShortcutsRegistry::GlobalShortcutsRegistry()
+    : GlobalShortcutsRegistry(std::unique_ptr<KGlobalAccelInterface>())
+{
+}
+
+GlobalShortcutsRegistry::GlobalShortcutsRegistry(std::unique_ptr<KGlobalAccelInterface> interface)
     : QObject()
-    , _manager(loadPlugin(this))
+    , _manager(interface ? interface.get() : loadPlugin(this))
     , _config(QStringLiteral("kglobalshortcutsrc"), KConfig::SimpleConfig, QStandardPaths::GenericConfigLocation)
     , _state(QStringLiteral("kglobalshortcutsstaterc"), KConfig::SimpleConfig, QStandardPaths::GenericStateLocation)
 {
+    if (interface) {
+        interface->setRegistry(this);
+        interface.release();
+    }
+
     migrateKHotkeys();
     migrateConfig();
 
@@ -755,6 +765,10 @@ void GlobalShortcutsRegistry::loadSettings()
         for (const QString &context : groupList) {
             // Skip the friendly name group, this was previously used instead of _k_friendly_name
             if (context == QLatin1String("Friendly Name")) {
+                continue;
+            }
+            // Skip any other sub-groups that are used to store extended action info
+            if (Component::isReservedConfigGroupName(context)) {
                 continue;
             }
 
