@@ -93,6 +93,13 @@ void KServiceActionComponent::emitGlobalShortcutEvent(const GlobalShortcut &shor
 
 void KServiceActionComponent::loadFromService()
 {
+    const auto lstActions = m_service->actions();
+    for (const KServiceAction &action : lstActions) {
+        const QString shortcutString = action.property<QStringList>(QStringLiteral("X-KDE-Shortcuts")).join(QLatin1Char('\t'));
+        GlobalShortcut *shortcut = registerShortcut(action.name(), action.text(), shortcutString, shortcutString);
+        shortcut->setIsPresent(true);
+    }
+
     const QString type = m_service->property<QString>(QStringLiteral("X-KDE-GlobalShortcutType"));
 
     // Type can be Application or Service
@@ -101,13 +108,6 @@ void KServiceActionComponent::loadFromService()
     if (type.isEmpty() || type == QLatin1String("Application")) {
         const QString shortcutString = m_service->property<QStringList>(QStringLiteral("X-KDE-Shortcuts")).join(QLatin1Char('\t'));
         GlobalShortcut *shortcut = registerShortcut(QStringLiteral("_launch"), m_service->name(), shortcutString, shortcutString);
-        shortcut->setIsPresent(true);
-    }
-
-    const auto lstActions = m_service->actions();
-    for (const KServiceAction &action : lstActions) {
-        const QString shortcutString = action.property<QStringList>(QStringLiteral("X-KDE-Shortcuts")).join(QLatin1Char('\t'));
-        GlobalShortcut *shortcut = registerShortcut(action.name(), action.text(), shortcutString, shortcutString);
         shortcut->setIsPresent(true);
     }
 }
