@@ -270,24 +270,10 @@ bool Component::isShortcutAvailable(const QKeySequence &key, const QString &comp
 GlobalShortcut *
 Component::registerShortcut(const QString &uniqueName, const QString &friendlyName, const QString &shortcutString, const QString &defaultShortcutString)
 {
-    // The shortcut will register itself with us
     GlobalShortcut *shortcut = new GlobalShortcut(uniqueName, friendlyName, currentContext(), _registry);
-
-    const QList<QKeySequence> keys = keysFromString(shortcutString);
+    shortcut->setKeys(keysFromString(shortcutString));
     shortcut->setDefaultKeys(keysFromString(defaultShortcutString));
     shortcut->setIsFresh(false);
-    QList<QKeySequence> newKeys = keys;
-    for (const QKeySequence &key : keys) {
-        if (!key.isEmpty()) {
-            if (_registry->getShortcutByKey(key)) {
-                // The shortcut is already used. The config file is
-                // broken. Ignore the request.
-                newKeys.removeAll(key);
-                qCWarning(KGLOBALACCELD) << "Shortcut found twice in kglobalshortcutsrc." << key;
-            }
-        }
-    }
-    shortcut->setKeys(keys);
     return shortcut;
 }
 
