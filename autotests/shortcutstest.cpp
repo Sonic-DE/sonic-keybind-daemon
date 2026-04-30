@@ -26,6 +26,7 @@ private Q_SLOTS:
     void testShortcuts_data();
     void testShortcuts();
     void testSerialization();
+    void testContestedKeys();
 
 private:
     std::unique_ptr<KGlobalAccelD> m_globalacceld;
@@ -204,6 +205,37 @@ void ShortcutsTest::testSerialization()
     QCOMPARE(Component::keysFromString(QLatin1String("\tCtrl+P")), QSet<QKeySequence>() << QKeySequence() << QKeySequence(Qt::CTRL | Qt::Key_P));
     QCOMPARE(Component::keysFromString(QLatin1String("\tCtrl+P\t")), QSet<QKeySequence>() << QKeySequence() << QKeySequence(Qt::CTRL | Qt::Key_P));
     QCOMPARE(Component::stringFromKeys(QSet<QKeySequence>() << QKeySequence() << QKeySequence(Qt::CTRL | Qt::Key_P)), QLatin1String("\tCtrl+P"));
+}
+
+void ShortcutsTest::testContestedKeys()
+{
+    const QKeySequence shortcut(Qt::META | Qt::CTRL | Qt::Key_K);
+
+    auto firstAction = std::make_unique<QAction>();
+    firstAction->setObjectName(QStringLiteral("First Shortcut"));
+    QVERIFY(KGlobalAccel::setGlobalShortcut(firstAction.get(), shortcut));
+    QSignalSpy firstActionTriggeredSpy(firstAction.get(), &QAction::triggered);
+
+    auto secondAction = std::make_unique<QAction>();
+    secondAction->setObjectName(QStringLiteral("Second Shortcut"));
+    QVERIFY(KGlobalAccel::setGlobalShortcut(secondAction.get(), shortcut));
+    QSignalSpy secondActionTriggeredSpy(secondAction.get(), &QAction::triggered);
+
+    m_interface->checkKeyEvent(Qt::Key_Meta, ShortcutKeyState::Pressed);
+    m_interface->checkKeyEvent((Qt::MetaModifier | Qt::Key_Control).toCombined(), ShortcutKeyState::Pressed);
+    m_interface->checkKeyEvent((Qt::MetaModifier | Qt::ControlModifier | Qt::Key_K).toCombined(), ShortcutKeyState::Pressed);
+
+    QVERIFY(firstActionTriggeredSpy.wait());
+    QCOMPARE(firstActionTriggeredSpy.count(), 1);
+    QVERIFY(!secondActionTriggeredSpy.wait(100));
+    QCOMPARE(secondActionTriggeredSpy.count(), 0);
+
+    m_interface->checkKeyEvent((Qt::MetaModifier | Qt::ControlModifier | Qt::Key_K).toCombined(), ShortcutKeyState::Released);
+    m_interface->checkKeyEvent((Qt::MetaModifier | Qt::Key_Control).toCombined(), ShortcutKeyState::Released);
+    m_interface->checkKeyEvent(Qt::Key_Meta, ShortcutKeyState::Released);
+
+    m_globalaccel->removeAllShortcuts(firstAction.get());
+    m_globalaccel->removeAllShortcuts(secondAction.get());
 }
 
 QTEST_MAIN(ShortcutsTest)

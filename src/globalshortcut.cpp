@@ -130,24 +130,19 @@ void GlobalShortcut::setKeys(const QSet<QKeySequence> &newKeys)
         setInactive();
     }
 
-    _keys.clear();
+    if (Q_UNLIKELY(KGLOBALACCELD().isDebugEnabled())) {
+        for (const QKeySequence &keySequence : newKeys) {
+            if (keySequence.isEmpty()) {
+                continue;
+            }
 
-    for (const QKeySequence &key : newKeys) {
-        if (key.isEmpty()) {
-            qCDebug(KGLOBALACCELD) << _uniqueName << "skipping because key is empty";
-            _keys.insert(QKeySequence{});
+            if (const GlobalShortcut *shortcut = _registry->getShortcutByKey(keySequence)) {
+                qCDebug(KGLOBALACCELD) << _uniqueName << "may not be triggered by" << keySequence << "because it is already taken by" << shortcut->uniqueName();
+            }
         }
+    }
 
-        if (_registry->getShortcutByKey(key) //
-            || _registry->getShortcutByKey(key, KGlobalAccel::MatchType::Shadowed) //
-            || _registry->getShortcutByKey(key, KGlobalAccel::MatchType::Shadows) //
-        ) {
-            qCDebug(KGLOBALACCELD) << _uniqueName << "skipping because key" << QKeySequence(key).toString() << "is already taken";
-            _keys.insert(QKeySequence{});
-        }
-
-        _keys.insert(key);
-    };
+    _keys = newKeys;
 
     if (active) {
         setActive();
