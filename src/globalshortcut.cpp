@@ -118,12 +118,12 @@ void GlobalShortcut::setFriendlyName(const QString &name)
     _friendlyName = name;
 }
 
-QList<QKeySequence> GlobalShortcut::keys() const
+QSet<QKeySequence> GlobalShortcut::keys() const
 {
     return _keys;
 }
 
-void GlobalShortcut::setKeys(const QList<QKeySequence> &newKeys)
+void GlobalShortcut::setKeys(const QSet<QKeySequence> &newKeys)
 {
     bool active = _isRegistered;
     if (active) {
@@ -132,10 +132,10 @@ void GlobalShortcut::setKeys(const QList<QKeySequence> &newKeys)
 
     _keys.clear();
 
-    auto getKey = [this](const QKeySequence &key) {
+    for (const QKeySequence &key : newKeys) {
         if (key.isEmpty()) {
             qCDebug(KGLOBALACCELD) << _uniqueName << "skipping because key is empty";
-            return QKeySequence{};
+            _keys.insert(QKeySequence{});
         }
 
         if (_registry->getShortcutByKey(key) //
@@ -143,25 +143,23 @@ void GlobalShortcut::setKeys(const QList<QKeySequence> &newKeys)
             || _registry->getShortcutByKey(key, KGlobalAccel::MatchType::Shadows) //
         ) {
             qCDebug(KGLOBALACCELD) << _uniqueName << "skipping because key" << QKeySequence(key).toString() << "is already taken";
-            return QKeySequence{};
+            _keys.insert(QKeySequence{});
         }
 
-        return key;
+        _keys.insert(key);
     };
-
-    std::transform(newKeys.cbegin(), newKeys.cend(), std::back_inserter(_keys), getKey);
 
     if (active) {
         setActive();
     }
 }
 
-QList<QKeySequence> GlobalShortcut::defaultKeys() const
+QSet<QKeySequence> GlobalShortcut::defaultKeys() const
 {
     return _defaultKeys;
 }
 
-void GlobalShortcut::setDefaultKeys(const QList<QKeySequence> &newKeys)
+void GlobalShortcut::setDefaultKeys(const QSet<QKeySequence> &newKeys)
 {
     _defaultKeys = newKeys;
 }
