@@ -186,17 +186,18 @@ void ShortcutsTest::testShortcuts()
 
 void ShortcutsTest::testSerialization()
 {
-    QCOMPARE(Component::keysFromString(QLatin1String("none")), QList<QKeySequence>());
-    QCOMPARE(Component::stringFromKeys(QList<QKeySequence>()), QLatin1String("none"));
+    QCOMPARE(Component::keysFromString(QLatin1String("none")), QSet<QKeySequence>());
+    QCOMPARE(Component::stringFromKeys(QSet<QKeySequence>()), QLatin1String("none"));
 
-    QCOMPARE(Component::keysFromString(QLatin1String("")), QList<QKeySequence>() << QKeySequence());
-    QCOMPARE(Component::stringFromKeys(QList<QKeySequence>() << QKeySequence()), QLatin1String(""));
+    QCOMPARE(Component::keysFromString(QLatin1String("")), QSet<QKeySequence>() << QKeySequence());
+    QCOMPARE(Component::stringFromKeys(QSet<QKeySequence>() << QKeySequence()), QLatin1String(""));
 
-    QCOMPARE(Component::keysFromString(QLatin1String("Ctrl+P")), QList<QKeySequence>() << QKeySequence(Qt::CTRL | Qt::Key_P));
-    QCOMPARE(Component::stringFromKeys(QList<QKeySequence>() << QKeySequence(Qt::CTRL | Qt::Key_P)), QLatin1String("Ctrl+P"));
+    QCOMPARE(Component::keysFromString(QLatin1String("Ctrl+P")), QSet<QKeySequence>() << QKeySequence(Qt::CTRL | Qt::Key_P));
+    QCOMPARE(Component::stringFromKeys(QSet<QKeySequence>() << QKeySequence(Qt::CTRL | Qt::Key_P)), QLatin1String("Ctrl+P"));
 
-    QCOMPARE(Component::keysFromString(QLatin1String("\tCtrl+P\t")), QList<QKeySequence>() << QKeySequence() << QKeySequence(Qt::CTRL | Qt::Key_P) << QKeySequence());
-    QCOMPARE(Component::stringFromKeys(QList<QKeySequence>() << QKeySequence() << QKeySequence(Qt::CTRL | Qt::Key_P) << QKeySequence()), QLatin1String("\tCtrl+P\t"));
+    QCOMPARE(Component::keysFromString(QLatin1String("\tCtrl+P")), QSet<QKeySequence>() << QKeySequence() << QKeySequence(Qt::CTRL | Qt::Key_P));
+    QCOMPARE(Component::keysFromString(QLatin1String("\tCtrl+P\t")), QSet<QKeySequence>() << QKeySequence() << QKeySequence(Qt::CTRL | Qt::Key_P));
+    QCOMPARE(Component::stringFromKeys(QSet<QKeySequence>() << QKeySequence() << QKeySequence(Qt::CTRL | Qt::Key_P)), QLatin1String("\tCtrl+P"));
 }
 
 QTEST_MAIN(ShortcutsTest)

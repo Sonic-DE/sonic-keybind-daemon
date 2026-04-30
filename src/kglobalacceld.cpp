@@ -22,6 +22,29 @@
 #include <QMetaMethod>
 #include <QTimer>
 
+QDBusArgument &operator<<(QDBusArgument &argument, const QSet<QKeySequence> &sequences)
+{
+    argument.beginArray(QMetaType::fromType<QKeySequence>());
+    for (const QKeySequence &sequence : sequences) {
+        argument << sequence;
+    }
+    argument.endArray();
+    return argument;
+}
+
+const QDBusArgument &operator>>(const QDBusArgument &argument, QSet<QKeySequence> &sequences)
+{
+    sequences.clear();
+    argument.beginArray();
+    while (!argument.atEnd()) {
+        QKeySequence sequence;
+        argument >> sequence;
+        sequences.insert(sequence);
+    }
+    argument.endArray();
+    return argument;
+}
+
 struct KGlobalAccelDPrivate {
     KGlobalAccelDPrivate(KGlobalAccelD *qq)
         : q(qq)
@@ -173,6 +196,7 @@ bool KGlobalAccelD::init()
 {
     qDBusRegisterMetaType<QKeySequence>();
     qDBusRegisterMetaType<QList<QKeySequence>>();
+    qDBusRegisterMetaType<QSet<QKeySequence>>();
     qDBusRegisterMetaType<QList<QDBusObjectPath>>();
     qDBusRegisterMetaType<QList<QStringList>>();
     qDBusRegisterMetaType<QStringList>();
@@ -305,13 +329,13 @@ QList<int> KGlobalAccelD::shortcut(const QStringList &action) const
 }
 #endif
 
-QList<QKeySequence> KGlobalAccelD::shortcutKeys(const QStringList &action) const
+QSet<QKeySequence> KGlobalAccelD::shortcutKeys(const QStringList &action) const
 {
     GlobalShortcut *shortcut = d->findAction(action);
     if (shortcut) {
         return shortcut->keys();
     }
-    return QList<QKeySequence>();
+    return QSet<QKeySequence>();
 }
 
 #if KGLOBALACCELD_BUILD_DEPRECATED_SINCE(5, 90)
@@ -329,13 +353,13 @@ QList<int> KGlobalAccelD::defaultShortcut(const QStringList &action) const
 }
 #endif
 
-QList<QKeySequence> KGlobalAccelD::defaultShortcutKeys(const QStringList &action) const
+QSet<QKeySequence> KGlobalAccelD::defaultShortcutKeys(const QStringList &action) const
 {
     GlobalShortcut *shortcut = d->findAction(action);
     if (shortcut) {
         return shortcut->defaultKeys();
     }
-    return QList<QKeySequence>();
+    return QSet<QKeySequence>();
 }
 
 // This method just registers the action. Nothing else. Shortcut has to be set
@@ -459,23 +483,23 @@ void KGlobalAccelD::unRegister(const QStringList &actionId)
 #if KGLOBALACCELD_BUILD_DEPRECATED_SINCE(5, 90)
 QList<int> KGlobalAccelD::setShortcut(const QStringList &actionId, const QList<int> &keys, uint flags)
 {
-    QList<QKeySequence> input;
+    QSet<QKeySequence> input;
     input.reserve(keys.size());
     for (auto i : keys) {
         input << i;
     }
 
-    const QList<QKeySequence> list = setShortcutKeys(actionId, input, flags);
+    const QSet<QKeySequence> activeKeys = setShortcutKeys(actionId, input, flags);
     QList<int> ret;
-    ret.reserve(list.size());
-    for (auto i : list) {
+    ret.reserve(activeKeys.size());
+    for (auto i : activeKeys) {
         ret << i[0].toCombined();
     }
     return ret;
 }
 #endif
 
-QList<QKeySequence> KGlobalAccelD::setShortcutKeys(const QStringList &actionId, const QList<QKeySequence> &keys, uint flags)
+QSet<QKeySequence> KGlobalAccelD::setShortcutKeys(const QStringList &actionId, const QSet<QKeySequence> &keys, uint flags)
 {
     // spare the DBus framework some work
     const bool setPresent = (flags & SetPresent);
@@ -484,7 +508,7 @@ QList<QKeySequence> KGlobalAccelD::setShortcutKeys(const QStringList &actionId, 
 
     GlobalShortcut *shortcut = d->findAction(actionId);
     if (!shortcut) {
-        return QList<QKeySequence>();
+        return QSet<QKeySequence>();
     }
 
     // default shortcuts cannot clash because they don't do anything
@@ -527,7 +551,7 @@ QList<QKeySequence> KGlobalAccelD::setShortcutKeys(const QStringList &actionId, 
 #if KGLOBALACCELD_BUILD_DEPRECATED_SINCE(5, 90)
 void KGlobalAccelD::setForeignShortcut(const QStringList &actionId, const QList<int> &keys)
 {
-    QList<QKeySequence> input;
+    QSet<QKeySequence> input;
     for (auto i : keys) {
         input << i;
     }
@@ -535,7 +559,7 @@ void KGlobalAccelD::setForeignShortcut(const QStringList &actionId, const QList<
 }
 #endif
 
-void KGlobalAccelD::setForeignShortcutKeys(const QStringList &actionId, const QList<QKeySequence> &keys)
+void KGlobalAccelD::setForeignShortcutKeys(const QStringList &actionId, const QSet<QKeySequence> &keys)
 {
     qCDebug(KGLOBALACCELD) << actionId;
 
@@ -544,7 +568,7 @@ void KGlobalAccelD::setForeignShortcutKeys(const QStringList &actionId, const QL
         return;
     }
 
-    QList<QKeySequence> newKeys = setShortcutKeys(actionId, keys, NoAutoloading);
+    QSet<QKeySequence> newKeys = setShortcutKeys(actionId, keys, NoAutoloading);
 
     Q_EMIT yourShortcutsChanged(actionId, newKeys);
 }
