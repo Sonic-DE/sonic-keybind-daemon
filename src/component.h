@@ -122,8 +122,8 @@ protected:
     GlobalShortcut *
     registerShortcut(const QString &uniqueName, const QString &friendlyName, const QString &shortcutString, const QString &defaultShortcutString);
 
-    static QString stringFromKeys(const QList<QKeySequence> &keys);
-    static QList<QKeySequence> keysFromString(const QString &str);
+    static QString stringFromKeys(const QSet<QKeySequence> &keys);
+    static QSet<QKeySequence> keysFromString(const QString &str);
 
 public Q_SLOTS:
 

@@ -80,14 +80,14 @@ public Q_SLOTS:
     KGLOBALACCELD_DEPRECATED_VERSION(5, 90, "Use shortcutKeys(const QStringList &) instead.")
     Q_SCRIPTABLE QList<int> shortcut(const QStringList &actionId) const;
 #endif
-    Q_SCRIPTABLE QList<QKeySequence> shortcutKeys(const QStringList &actionId) const;
+    Q_SCRIPTABLE QSet<QKeySequence> shortcutKeys(const QStringList &actionId) const;
 
     // to be called by main components not owning the action
 #if KGLOBALACCELD_ENABLE_DEPRECATED_SINCE(5, 90)
     KGLOBALACCELD_DEPRECATED_VERSION(5, 90, "Use defaultShortcutKeys(const QStringList &) instead.")
     Q_SCRIPTABLE QList<int> defaultShortcut(const QStringList &actionId) const;
 #endif
-    Q_SCRIPTABLE QList<QKeySequence> defaultShortcutKeys(const QStringList &actionId) const;
+    Q_SCRIPTABLE QSet<QKeySequence> defaultShortcutKeys(const QStringList &actionId) const;
 
     /**
      * Get the dbus path for @ componentUnique
@@ -100,17 +100,17 @@ public Q_SLOTS:
 
     // to be called by main components owning the action
 #if KGLOBALACCELD_ENABLE_DEPRECATED_SINCE(5, 90)
-    KGLOBALACCELD_DEPRECATED_VERSION(5, 90, "Use setShortcutKeys(const QStringList &, const QList<QKeySequence> &, uint) instead.")
+    KGLOBALACCELD_DEPRECATED_VERSION(5, 90, "Use setShortcutKeys(const QStringList &, const QSet<QKeySequence> &, uint) instead.")
     Q_SCRIPTABLE QList<int> setShortcut(const QStringList &actionId, const QList<int> &keys, uint flags);
 #endif
-    Q_SCRIPTABLE QList<QKeySequence> setShortcutKeys(const QStringList &actionId, const QList<QKeySequence> &keys, uint flags);
+    Q_SCRIPTABLE QSet<QKeySequence> setShortcutKeys(const QStringList &actionId, const QSet<QKeySequence> &keys, uint flags);
 
     // this is used if application A wants to change shortcuts of application B
 #if KGLOBALACCELD_ENABLE_DEPRECATED_SINCE(5, 90)
-    KGLOBALACCELD_DEPRECATED_VERSION(5, 90, "Use setForeignShortcutKeys(const QStringList &, const QList<QKeySequence> &) instead.")
+    KGLOBALACCELD_DEPRECATED_VERSION(5, 90, "Use setForeignShortcutKeys(const QStringList &, const QSet<QKeySequence> &) instead.")
     Q_SCRIPTABLE void setForeignShortcut(const QStringList &actionId, const QList<int> &keys);
 #endif
-    Q_SCRIPTABLE void setForeignShortcutKeys(const QStringList &actionId, const QList<QKeySequence> &keys);
+    Q_SCRIPTABLE void setForeignShortcutKeys(const QStringList &actionId, const QSet<QKeySequence> &keys);
 
     // to be called when a KAction is destroyed. The shortcut stays in the data structures for
     // conflict resolution but won't trigger.
@@ -183,11 +183,11 @@ public Q_SLOTS:
 
 Q_SIGNALS:
 #if KGLOBALACCELD_ENABLE_DEPRECATED_SINCE(5, 90)
-    KGLOBALACCELD_DEPRECATED_VERSION(5, 90, "Use the yourShortcutsChanged(const QStringList &, const QList<QKeySequence> &) signal instead.")
+    KGLOBALACCELD_DEPRECATED_VERSION(5, 90, "Use the yourShortcutsChanged(const QStringList &, const QSet<QKeySequence> &) signal instead.")
     Q_SCRIPTABLE void yourShortcutGotChanged(const QStringList &actionId, const QList<int> &newKeys);
 #endif
 
-    Q_SCRIPTABLE void yourShortcutsChanged(const QStringList &actionId, const QList<QKeySequence> &newKeys);
+    Q_SCRIPTABLE void yourShortcutsChanged(const QStringList &actionId, const QSet<QKeySequence> &newKeys);
 
 private:
     void scheduleWriteSettings() const;
