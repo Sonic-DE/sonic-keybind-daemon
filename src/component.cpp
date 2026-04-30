@@ -19,27 +19,31 @@
 #include <private/qtx11extras_p.h>
 #endif
 
-QList<QKeySequence> Component::keysFromString(const QString &str)
+QSet<QKeySequence> Component::keysFromString(const QString &str)
 {
-    QList<QKeySequence> ret;
+    QSet<QKeySequence> ret;
     if (str == QLatin1String("none")) {
         return ret;
     }
     const QStringList strList = str.split(QLatin1Char('\t'));
     for (const QString &s : strList) {
         QKeySequence key = QKeySequence::fromString(s, QKeySequence::PortableText);
-        ret.append(key);
+        ret.insert(key);
     }
     return ret;
 }
 
-QString Component::stringFromKeys(const QList<QKeySequence> &keys)
+QString Component::stringFromKeys(const QSet<QKeySequence> &keys)
 {
     if (keys.isEmpty()) {
         return QStringLiteral("none");
     }
+
+    QList<QKeySequence> sortedKeys(keys.begin(), keys.end());
+    std::sort(sortedKeys.begin(), sortedKeys.end());
+
     QString ret;
-    for (const QKeySequence &key : keys) {
+    for (const QKeySequence &key : sortedKeys) {
         ret.append(key.toString(QKeySequence::PortableText));
         ret.append(QLatin1Char('\t'));
     }

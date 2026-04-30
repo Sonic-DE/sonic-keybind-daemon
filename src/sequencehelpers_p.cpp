@@ -78,7 +78,7 @@ Qt::KeyboardModifiers keyToModifier(int key)
     }
 }
 
-bool matchSequences(const QKeySequence &key, const QList<QKeySequence> &keys)
+bool matchSequences(const QKeySequence &key, const QSet<QKeySequence> &keys)
 {
     // Since we're testing sequences, we need to check for all possible matches
     // between existing and new sequences.
