@@ -178,7 +178,7 @@ void ShortcutsTest::testShortcuts()
         QVERIFY(spy.wait());
         QCOMPARE(spy.count(), 1);
     } else {
-        QVERIFY(!spy.wait());
+        QVERIFY(!spy.wait(100));
         QCOMPARE(spy.count(), 0);
     }
     m_globalaccel->removeAllShortcuts(action.get());
