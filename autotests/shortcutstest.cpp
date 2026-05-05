@@ -10,6 +10,7 @@
 #include "dummy.h"
 #include "kglobalacceld.h"
 
+#include <QFile>
 #include <QPluginLoader>
 #include <QSignalSpy>
 #include <QStandardPaths>
@@ -35,6 +36,11 @@ private:
 void ShortcutsTest::initTestCase()
 {
     QStandardPaths::setTestModeEnabled(true);
+
+    if (const QString filePath = QStandardPaths::locate(QStandardPaths::ConfigLocation, QStringLiteral("kglobalshortcutsrc")); !filePath.isEmpty()) {
+        QFile::remove(filePath);
+    }
+
     qputenv("KGLOBALACCELD_PLATFORM", "dummy");
     m_globalacceld = std::make_unique<KGlobalAccelD>();
     QVERIFY(m_globalacceld->init());
