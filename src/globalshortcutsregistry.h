@@ -149,6 +149,9 @@ public Q_SLOTS:
     // Ungrab the keys
     void ungrabKeys();
 
+Q_SIGNALS:
+    void needsSave();
+
 private:
     friend struct KGlobalAccelDPrivate;
     friend class Component;
@@ -210,6 +213,7 @@ private:
     KGlobalAccelInterface *_manager = nullptr;
 
     mutable KConfig _config;
+    KConfig _state;
 
     /**
      * Flag that enables allow-list enforcement for shortcuts.

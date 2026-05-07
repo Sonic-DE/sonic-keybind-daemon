@@ -283,6 +283,7 @@ GlobalShortcutsRegistry::GlobalShortcutsRegistry()
     : QObject()
     , _manager(loadPlugin(this))
     , _config(getConfigFile(), KConfig::SimpleConfig)
+    , _state(QStringLiteral("kglobalshortcutsstaterc"), KConfig::SimpleConfig, QStandardPaths::GenericStateLocation)
 {
     migrateKHotkeys();
     migrateConfig();
@@ -712,6 +713,9 @@ void GlobalShortcutsRegistry::loadSettings()
         return;
     }
 
+    const KConfigGroup general = _state.group(QStringLiteral("$General"));
+    m_serial = general.readEntry<uint64_t>("LastSerial", 0);
+
     auto groupList = _config.groupList();
     for (const QString &groupName : groupList) {
         if (groupName == QLatin1String("services")) {
@@ -731,6 +735,7 @@ void GlobalShortcutsRegistry::loadSettings()
         Q_ASSERT(!getComponent(groupName));
 
         const KConfigGroup configGroup(&_config, groupName);
+        const KConfigGroup stateGroup(&_state, groupName);
 
         const QString friendlyName = configGroup.readEntry("_k_friendly_name");
 
@@ -744,16 +749,17 @@ void GlobalShortcutsRegistry::loadSettings()
                 continue;
             }
 
-            const KConfigGroup contextGroup(&configGroup, context);
-            QString contextFriendlyName = contextGroup.readEntry("_k_friendly_name");
+            const KConfigGroup contextConfigGroup(&configGroup, context);
+            const KConfigGroup contextStateGroup(&stateGroup, context);
+            QString contextFriendlyName = contextConfigGroup.readEntry("_k_friendly_name");
             component->createGlobalShortcutContext(context, contextFriendlyName);
             component->activateGlobalShortcutContext(context);
-            component->loadSettings(contextGroup);
+            component->loadSettings(contextConfigGroup, contextStateGroup);
         }
 
         // Load the default context
         component->activateGlobalShortcutContext(QStringLiteral("default"));
-        component->loadSettings(configGroup);
+        component->loadSettings(configGroup, stateGroup);
     }
 
     groupList = _config.group(QStringLiteral("services")).groupList();
@@ -767,6 +773,7 @@ void GlobalShortcutsRegistry::loadSettings()
         Q_ASSERT(!getComponent(groupName));
 
         const KConfigGroup configGroup = _config.group(QStringLiteral("services")).group(groupName);
+        const KConfigGroup stateGroup = _state.group(QStringLiteral("services")).group(groupName);
 
         Component *component = createServiceActionComponent(groupName);
 
@@ -776,7 +783,7 @@ void GlobalShortcutsRegistry::loadSettings()
         }
         Q_ASSERT(!component->uniqueName().isEmpty());
         component->activateGlobalShortcutContext(QStringLiteral("default"));
-        component->loadSettings(configGroup);
+        component->loadSettings(configGroup, stateGroup);
     }
 
     // Load the configured KServiceActions
@@ -797,9 +804,12 @@ void GlobalShortcutsRegistry::loadSettings()
             continue;
         }
 
+        const KConfigGroup configGroup = _config.group(QStringLiteral("services")).group(fileName);
+        const KConfigGroup stateGroup = _state.group(QStringLiteral("services")).group(fileName);
+
         auto *actionComp = createServiceActionComponent(service);
         actionComp->activateGlobalShortcutContext(QStringLiteral("default"));
-        actionComp->loadFromService();
+        actionComp->loadSettings(configGroup, stateGroup);
     }
 
     detectAppsWithShortcuts();
@@ -830,11 +840,9 @@ void GlobalShortcutsRegistry::detectAppsWithShortcuts()
         auto *component = createServiceActionComponent(service);
         component->activateGlobalShortcutContext(QStringLiteral("default"));
 
-        if (const KConfigGroup configGroup = _config.group(QStringLiteral("services")).group(component->uniqueName()); configGroup.exists()) {
-            component->loadSettings(configGroup);
-        } else {
-            component->loadFromService();
-        }
+        const KConfigGroup configGroup = _config.group(QStringLiteral("services")).group(component->uniqueName());
+        const KConfigGroup stateGroup = _state.group(QStringLiteral("services")).group(component->uniqueName());
+        component->loadSettings(configGroup, stateGroup);
     }
 }
 
@@ -952,23 +960,29 @@ bool GlobalShortcutsRegistry::unregisterKey(const QKeySequence &key, GlobalShort
 
 void GlobalShortcutsRegistry::writeSettings()
 {
+    KConfigGroup general = _state.group(QStringLiteral("$General"));
+    general.writeEntry("LastSerial", m_serial);
+
     auto it = std::remove_if(m_components.begin(), m_components.end(), [this](const ComponentPtr &component) {
         bool isService = component->uniqueName().endsWith(QLatin1String(".desktop"));
 
         KConfigGroup configGroup =
             isService ? _config.group(QStringLiteral("services")).group(component->uniqueName()) : _config.group(component->uniqueName());
+        KConfigGroup stateGroup = isService ? _state.group(QStringLiteral("services")).group(component->uniqueName()) : _state.group(component->uniqueName());
 
         if (component->allShortcuts().isEmpty()) {
             configGroup.deleteGroup();
+            stateGroup.deleteGroup();
             return true;
         } else {
-            component->writeSettings(configGroup);
+            component->writeSettings(configGroup, stateGroup);
             return false;
         }
     });
 
     m_components.erase(it, m_components.end());
     _config.sync();
+    _state.sync();
 }
 
 void GlobalShortcutsRegistry::scheduleRefreshServices()
