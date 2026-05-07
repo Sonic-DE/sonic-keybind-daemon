@@ -163,7 +163,7 @@ private:
 
     bool processKey(int keyQt, ShortcutKeyState state);
 
-    QHash<QKeySequence, GlobalShortcut *> _active_keys;
+    QMultiHash<QKeySequence, GlobalShortcut *> _active_keys;
     QKeySequence _active_sequence;
     QHash<int, int> _keys_count;
 
