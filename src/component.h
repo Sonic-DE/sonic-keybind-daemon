@@ -90,7 +90,7 @@ public:
     bool isShortcutAvailable(const QKeySequence &key, const QString &component, const QString &context) const;
 
     //! Load the settings from config group @p config
-    virtual void loadSettings(const KConfigGroup &config);
+    virtual void loadSettings(const KConfigGroup &config, const KConfigGroup &state);
 
     //! Sets the human readable name for this component.
     void setFriendlyName(const QString &);
@@ -100,7 +100,7 @@ public:
     //! Unregister @a shortcut. This will remove its siblings from all contexts
     void unregisterShortcut(const QString &uniqueName);
 
-    virtual void writeSettings(KConfigGroup &config) const;
+    virtual void writeSettings(KConfigGroup &config, KConfigGroup &state) const;
 
 protected:
     friend class ::GlobalShortcutsRegistry;
@@ -119,8 +119,11 @@ protected:
      *                   such as "CTRL+S", when the user choses to reset to default
      *                   the keyboard shortcut will return to this one.
      */
-    GlobalShortcut *
-    registerShortcut(const QString &uniqueName, const QString &friendlyName, const QString &shortcutString, const QString &defaultShortcutString);
+    GlobalShortcut *registerShortcut(const QString &uniqueName,
+                                     const QString &friendlyName,
+                                     const QString &shortcutString,
+                                     const QString &defaultShortcutString,
+                                     uint64_t serial = 0);
 
     static QString stringFromKeys(const QSet<QKeySequence> &keys);
     static QSet<QKeySequence> keysFromString(const QString &str);

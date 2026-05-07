@@ -142,7 +142,7 @@ Component *KGlobalAccelDPrivate::component(const QStringList &actionId) const
             return nullptr;
         }
         actionComp->activateGlobalShortcutContext(QStringLiteral("default"));
-        actionComp->loadFromService();
+        actionComp->loadSettings(KConfigGroup(), KConfigGroup());
         return actionComp;
     } else {
         return m_registry->createComponent(uniqueName, friendlyName);
@@ -207,6 +207,7 @@ bool KGlobalAccelD::init()
 
     d->m_registry = std::make_unique<GlobalShortcutsRegistry>();
     Q_ASSERT(d->m_registry);
+    connect(d->m_registry.get(), &GlobalShortcutsRegistry::needsSave, this, &KGlobalAccelD::scheduleWriteSettings);
 
     d->writeoutTimer.setSingleShot(true);
     connect(&d->writeoutTimer, &QTimer::timeout, d->m_registry.get(), &GlobalShortcutsRegistry::writeSettings);
