@@ -31,6 +31,8 @@
 #include <QPluginLoader>
 #include <QStandardPaths>
 
+#include <algorithm>
+
 using namespace Qt::StringLiterals;
 
 static bool checkPlatform(const QJsonObject &metadata, const QString &platformName)
@@ -400,6 +402,33 @@ QList<GlobalShortcut *> GlobalShortcutsRegistry::getShortcutsByKey(const QKeySeq
     return {};
 }
 
+GlobalShortcut *GlobalShortcutsRegistry::activeShortcutByKey(const QKeySequence &keySequence) const
+{
+    // TODO: Ensure that we operate with normalized keys so the lookup time can be O(1) on average instead of O(N).
+    const QKeySequence normalizedKeySequence = Utils::normalizeSequence(keySequence);
+    QVarLengthArray<GlobalShortcut *, 4> shortcuts;
+    for (const auto &[candidateKeySequence, shortcut] : _active_keys.asKeyValueRange()) {
+        const QKeySequence normalizedCandidateKeySequence = Utils::normalizeSequence(candidateKeySequence);
+        if (normalizedKeySequence == normalizedCandidateKeySequence) {
+            shortcuts.append(shortcut);
+        }
+    }
+
+    if (shortcuts.isEmpty()) {
+        return nullptr;
+    }
+
+    if (shortcuts.size() == 1) {
+        return shortcuts[0];
+    }
+
+    std::sort(shortcuts.begin(), shortcuts.end(), [](const auto &a, const auto &b) {
+        return a->serial() < b->serial();
+    });
+
+    return shortcuts[0];
+}
+
 bool GlobalShortcutsRegistry::isShortcutAvailable(const QKeySequence &shortcut, const QString &componentName, const QString &contextName) const
 {
     return std::all_of(m_components.cbegin(), m_components.cend(), [&shortcut, &componentName, &contextName](const ComponentPtr &component) {
@@ -526,7 +555,7 @@ bool GlobalShortcutsRegistry::processKey(int keyQt, ShortcutKeyState state)
             sequenceToCheck[i] = _active_sequence[_active_sequence.count() - length + i].toCombined();
         }
         tempSequence = QKeySequence(sequenceToCheck[0], sequenceToCheck[1], sequenceToCheck[2], sequenceToCheck[3]);
-        shortcut = getShortcutByKey(tempSequence);
+        shortcut = activeShortcutByKey(tempSequence);
 
         if (shortcut) {
             break;
@@ -979,6 +1008,11 @@ void GlobalShortcutsRegistry::refreshServices()
 KGlobalAccelInterface *GlobalShortcutsRegistry::interface() const
 {
     return _manager;
+}
+
+uint64_t GlobalShortcutsRegistry::nextSerial()
+{
+    return ++m_serial;
 }
 
 #include "moc_globalshortcutsregistry.cpp"
