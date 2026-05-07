@@ -91,27 +91,6 @@ void KServiceActionComponent::emitGlobalShortcutEvent(const GlobalShortcut &shor
     job->start();
 }
 
-void KServiceActionComponent::loadFromService()
-{
-    const auto lstActions = m_service->actions();
-    for (const KServiceAction &action : lstActions) {
-        const QString shortcutString = action.property<QStringList>(QStringLiteral("X-KDE-Shortcuts")).join(QLatin1Char('\t'));
-        GlobalShortcut *shortcut = registerShortcut(action.name(), action.text(), shortcutString, shortcutString);
-        shortcut->setIsPresent(true);
-    }
-
-    const QString type = m_service->property<QString>(QStringLiteral("X-KDE-GlobalShortcutType"));
-
-    // Type can be Application or Service
-    // For applications add a lauch shortcut
-    // If no type is set assume Application
-    if (type.isEmpty() || type == QLatin1String("Application")) {
-        const QString shortcutString = m_service->property<QStringList>(QStringLiteral("X-KDE-Shortcuts")).join(QLatin1Char('\t'));
-        GlobalShortcut *shortcut = registerShortcut(QStringLiteral("_launch"), m_service->name(), shortcutString, shortcutString);
-        shortcut->setIsPresent(true);
-    }
-}
-
 bool KServiceActionComponent::cleanUp()
 {
     qCDebug(KGLOBALACCELD) << "Disabling desktop file";
@@ -124,19 +103,23 @@ bool KServiceActionComponent::cleanUp()
     return Component::cleanUp();
 }
 
-void KServiceActionComponent::writeSettings(KConfigGroup &config) const
+void KServiceActionComponent::writeSettings(KConfigGroup &config, KConfigGroup &state) const
 {
     // Clear the config so we remove entries after forgetGlobalShortcut
     config.deleteGroup();
+    state.deleteGroup();
 
     // Now write all contexts
     for (GlobalShortcutContext *context : std::as_const(_contexts)) {
         KConfigGroup contextGroup;
+        KConfigGroup contextStateGroup;
 
         if (context->uniqueName() == QLatin1String("default")) {
             contextGroup = config;
+            contextStateGroup = state;
         } else {
             contextGroup = KConfigGroup(&config, context->uniqueName());
+            contextStateGroup = KConfigGroup(&state, context->uniqueName());
         }
 
         for (const GlobalShortcut *shortcut : std::as_const(context->_actionsMap)) {
@@ -151,19 +134,22 @@ void KServiceActionComponent::writeSettings(KConfigGroup &config) const
             } else {
                 contextGroup.revertToDefault(shortcut->uniqueName());
             }
+
+            contextStateGroup.writeEntry(shortcut->uniqueName(), shortcut->serial());
         }
     }
 }
 
-void KServiceActionComponent::loadSettings(const KConfigGroup &configGroup)
+void KServiceActionComponent::loadSettings(const KConfigGroup &configGroup, const KConfigGroup &stateGroup)
 {
     // Action shortcuts
     const auto actions = m_service->actions();
     for (const KServiceAction &action : actions) {
         const QString defaultShortcutString = action.property<QString>(QStringLiteral("X-KDE-Shortcuts")).replace(QLatin1Char(','), QLatin1Char('\t'));
         const QString shortcutString = configGroup.readEntry(action.name(), defaultShortcutString);
+        const quint64 serial = stateGroup.readEntry<uint64_t>(action.name(), 0);
 
-        GlobalShortcut *shortcut = registerShortcut(action.name(), action.text(), shortcutString, defaultShortcutString);
+        GlobalShortcut *shortcut = registerShortcut(action.name(), action.text(), shortcutString, defaultShortcutString, serial);
         shortcut->setIsPresent(true);
     }
 
@@ -175,7 +161,8 @@ void KServiceActionComponent::loadSettings(const KConfigGroup &configGroup)
     if (type.isEmpty() || type == QLatin1String("Application")) {
         const QString defaultShortcutString = m_service->property<QString>(QStringLiteral("X-KDE-Shortcuts")).replace(QLatin1Char(','), QLatin1Char('\t'));
         const QString shortcutString = configGroup.readEntry("_launch", defaultShortcutString);
-        GlobalShortcut *shortcut = registerShortcut(QStringLiteral("_launch"), m_service->name(), shortcutString, defaultShortcutString);
+        const quint64 serial = stateGroup.readEntry<uint64_t>("_launch", 0);
+        GlobalShortcut *shortcut = registerShortcut(QStringLiteral("_launch"), m_service->name(), shortcutString, defaultShortcutString, serial);
         shortcut->setIsPresent(true);
     }
 }

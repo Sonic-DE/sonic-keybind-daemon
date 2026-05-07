@@ -271,11 +271,17 @@ bool Component::isShortcutAvailable(const QKeySequence &key, const QString &comp
     return true;
 }
 
-GlobalShortcut *
-Component::registerShortcut(const QString &uniqueName, const QString &friendlyName, const QString &shortcutString, const QString &defaultShortcutString)
+GlobalShortcut *Component::registerShortcut(const QString &uniqueName,
+                                            const QString &friendlyName,
+                                            const QString &shortcutString,
+                                            const QString &defaultShortcutString,
+                                            uint64_t serial)
 {
-    // TODO: Save and restore serials.
-    const uint64_t serial = _registry->nextSerial();
+    if (!serial) {
+        serial = _registry->nextSerial();
+        Q_EMIT _registry->needsSave();
+    }
+
     GlobalShortcut *shortcut = new GlobalShortcut(uniqueName, friendlyName, serial, currentContext(), _registry);
     shortcut->setKeys(keysFromString(shortcutString));
     shortcut->setDefaultKeys(keysFromString(defaultShortcutString));
@@ -283,7 +289,7 @@ Component::registerShortcut(const QString &uniqueName, const QString &friendlyNa
     return shortcut;
 }
 
-void Component::loadSettings(const KConfigGroup &configGroup)
+void Component::loadSettings(const KConfigGroup &configGroup, const KConfigGroup &stateGroup)
 {
     // GlobalShortcutsRegistry::loadSettings handles contexts.
     const auto listKeys = configGroup.keyList();
@@ -293,7 +299,9 @@ void Component::loadSettings(const KConfigGroup &configGroup)
             continue;
         }
 
-        registerShortcut(confKey, entry[2], entry[0], entry[1]);
+        const uint64_t serial = stateGroup.readEntry<uint64_t>(confKey, 0);
+
+        registerShortcut(confKey, entry[2], entry[0], entry[1], serial);
     }
 }
 
@@ -333,11 +341,12 @@ void Component::unregisterShortcut(const QString &uniqueName)
     }
 }
 
-void Component::writeSettings(KConfigGroup &configGroup) const
+void Component::writeSettings(KConfigGroup &configGroup, KConfigGroup &stateGroup) const
 {
     // If we don't delete the current content global shortcut
     // registrations will never not deleted after forgetGlobalShortcut()
     configGroup.deleteGroup();
+    stateGroup.deleteGroup();
 
     // Now write all contexts
     for (GlobalShortcutContext *context : std::as_const(_contexts)) {
@@ -370,6 +379,7 @@ void Component::writeSettings(KConfigGroup &configGroup) const
             entry.append(shortcut->friendlyName());
 
             contextGroup.writeEntry(shortcut->uniqueName(), entry);
+            stateGroup.writeEntry(shortcut->uniqueName(), shortcut->serial());
         }
     }
 }
