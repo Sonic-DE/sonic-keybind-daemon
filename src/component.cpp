@@ -274,7 +274,9 @@ bool Component::isShortcutAvailable(const QKeySequence &key, const QString &comp
 GlobalShortcut *
 Component::registerShortcut(const QString &uniqueName, const QString &friendlyName, const QString &shortcutString, const QString &defaultShortcutString)
 {
-    GlobalShortcut *shortcut = new GlobalShortcut(uniqueName, friendlyName, currentContext(), _registry);
+    // TODO: Save and restore serials.
+    const uint64_t serial = _registry->nextSerial();
+    GlobalShortcut *shortcut = new GlobalShortcut(uniqueName, friendlyName, serial, currentContext(), _registry);
     shortcut->setKeys(keysFromString(shortcutString));
     shortcut->setDefaultKeys(keysFromString(defaultShortcutString));
     shortcut->setIsFresh(false);

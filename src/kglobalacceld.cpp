@@ -180,6 +180,7 @@ GlobalShortcut *KGlobalAccelDPrivate::addAction(const QStringList &actionId)
 
     return new GlobalShortcut(actionId.at(KGlobalAccel::ActionUnique),
                               actionId.at(KGlobalAccel::ActionFriendly),
+                              m_registry->nextSerial(),
                               component->shortcutContext(contextUnique),
                               m_registry.get());
 }

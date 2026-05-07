@@ -26,7 +26,7 @@ class GlobalShortcutsRegistry;
 class GlobalShortcut
 {
 public:
-    GlobalShortcut(const QString &uniqueName, const QString &friendlyName, GlobalShortcutContext *context, GlobalShortcutsRegistry *registry);
+    GlobalShortcut(const QString &uniqueName, const QString &friendlyName, uint64_t serial, GlobalShortcutContext *context, GlobalShortcutsRegistry *registry);
 
     ~GlobalShortcut();
 
@@ -81,6 +81,9 @@ public:
     //! Remove this shortcut and it's siblings
     void unRegister();
 
+    //! The serial indicates the time when the shortcut has been registered.
+    uint64_t serial() const;
+
 private:
     //! means the associated application is present.
     bool _isPresent : 1;
@@ -101,6 +104,7 @@ private:
 
     QSet<QKeySequence> _keys;
     QSet<QKeySequence> _defaultKeys;
+    uint64_t _serial;
 };
 
 #endif /* #ifndef GLOBALSHORTCUT_H */
