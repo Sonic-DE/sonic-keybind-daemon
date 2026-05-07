@@ -104,7 +104,13 @@ public:
      *
      * @see getShortcutsByKey(int key)
      */
-    QList<GlobalShortcut *> getShortcutsByKey(const QKeySequence &key, KGlobalAccel::MatchType type) const;
+    QList<GlobalShortcut *> getShortcutsByKey(const QKeySequence &keySequence, KGlobalAccel::MatchType type) const;
+
+    /**
+     * Returns an active shortcut for the specified @a keySequence. If there is no active global shortcut
+     * with the given key combination, @c null will be returned.
+     */
+    GlobalShortcut *activeShortcutByKey(const QKeySequence &keySequence) const;
 
     /**
      * Checks if @p shortcut is available for @p component.
@@ -121,6 +127,13 @@ public:
     bool unregisterKey(const QKeySequence &key, GlobalShortcut *shortcut);
 
     KGlobalAccelInterface *interface() const;
+
+    /**
+     * Generates the next available global shortcut serial. Global shortcut serials increase
+     * monotonically, 1 is the first valid serial. The serial describes the time when the global
+     * shortcut has been registered.
+     */
+    uint64_t nextSerial();
 
 public Q_SLOTS:
 
@@ -242,6 +255,7 @@ private:
     QDBusObjectPath _dbusPath;
     GlobalShortcut *m_lastShortcut = nullptr;
     QTimer m_refreshServicesTimer;
+    uint64_t m_serial = 0;
 };
 
 #endif /* #ifndef GLOBALSHORTCUTSREGISTRY_H */

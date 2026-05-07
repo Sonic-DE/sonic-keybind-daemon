@@ -15,7 +15,11 @@
 
 #include <QKeySequence>
 
-GlobalShortcut::GlobalShortcut(const QString &uniqueName, const QString &friendlyName, GlobalShortcutContext *context, GlobalShortcutsRegistry *registry)
+GlobalShortcut::GlobalShortcut(const QString &uniqueName,
+                               const QString &friendlyName,
+                               uint64_t serial,
+                               GlobalShortcutContext *context,
+                               GlobalShortcutsRegistry *registry)
     : _isPresent(false)
     , _isRegistered(false)
     , _isFresh(true)
@@ -23,6 +27,7 @@ GlobalShortcut::GlobalShortcut(const QString &uniqueName, const QString &friendl
     , _context(context)
     , _uniqueName(uniqueName)
     , _friendlyName(friendlyName)
+    , _serial(serial)
 {
     if (_context) {
         _context->addShortcut(this);
@@ -190,4 +195,9 @@ void GlobalShortcut::setInactive()
     }
 
     _isRegistered = false;
+}
+
+uint64_t GlobalShortcut::serial() const
+{
+    return _serial;
 }
