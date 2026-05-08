@@ -29,6 +29,8 @@ private Q_SLOTS:
     void testContestedKeys();
     void testComponentPaths_data();
     void testComponentPaths();
+    void testNormalizedShortcuts_data();
+    void testNormalizedShortcuts();
 
 private:
     std::unique_ptr<KGlobalAccelD> m_globalacceld;
@@ -95,34 +97,34 @@ void ShortcutsTest::testShortcuts_data()
         << false;
 
     QTest::newRow("modifier-only single mod") << QKeySequence(
-        Qt::ControlModifier) << (Events() << std::make_pair(QEvent::KeyPress, Qt::Key_Control) << std::make_pair(QEvent::KeyRelease, Qt::Key_Control))
+        Qt::Key_Control) << (Events() << std::make_pair(QEvent::KeyPress, Qt::Key_Control) << std::make_pair(QEvent::KeyRelease, Qt::Key_Control))
                                               << true;
     QTest::newRow("mod+key does not trigger modifier-only single mod")
-        << QKeySequence(Qt::ControlModifier)
+        << QKeySequence(Qt::Key_Control)
         << (Events() << std::make_pair(QEvent::KeyPress, Qt::Key_Control) << std::make_pair(QEvent::KeyPress, (Qt::ControlModifier | Qt::Key_P).toCombined())
                      << std::make_pair(QEvent::KeyRelease, (Qt::ControlModifier | Qt::Key_P).toCombined())
                      << std::make_pair(QEvent::KeyRelease, Qt::Key_Control))
         << false;
-    QTest::newRow("modifier-only multiple mods") << QKeySequence(Qt::ControlModifier | Qt::AltModifier)
+    QTest::newRow("modifier-only multiple mods") << QKeySequence(Qt::ControlModifier | Qt::Key_Alt)
                                                  << (Events() << std::make_pair(QEvent::KeyPress, Qt::Key_Control)
                                                               << std::make_pair(QEvent::KeyPress, (Qt::ControlModifier | Qt::Key_Alt).toCombined())
                                                               << std::make_pair(QEvent::KeyRelease, (Qt::ControlModifier | Qt::Key_Alt).toCombined())
                                                               << std::make_pair(QEvent::KeyRelease, Qt::Key_Control))
                                                  << true;
     QTest::newRow("modifier-only multiple mods trigger when released out of order")
-        << QKeySequence(Qt::ControlModifier | Qt::AltModifier)
+        << QKeySequence(Qt::ControlModifier | Qt::Key_Alt)
         << (Events() << std::make_pair(QEvent::KeyPress, Qt::Key_Alt) << std::make_pair(QEvent::KeyPress, (Qt::AltModifier | Qt::Key_Control).toCombined())
                      << std::make_pair(QEvent::KeyRelease, (Qt::ControlModifier | Qt::Key_Alt).toCombined())
                      << std::make_pair(QEvent::KeyRelease, Qt::Key_Control))
         << true;
     QTest::newRow("modifier-only multiple mods does not trigger modifier-only single mod")
-        << QKeySequence(Qt::ControlModifier)
+        << QKeySequence(Qt::Key_Control)
         << (Events() << std::make_pair(QEvent::KeyPress, Qt::Key_Control) << std::make_pair(QEvent::KeyPress, (Qt::ControlModifier | Qt::Key_Alt).toCombined())
                      << std::make_pair(QEvent::KeyRelease, (Qt::ControlModifier | Qt::Key_Alt).toCombined())
                      << std::make_pair(QEvent::KeyRelease, Qt::Key_Control))
         << false;
     QTest::newRow("modifier-only multiple mods trigger when part of the sequence")
-        << QKeySequence(Qt::ControlModifier | Qt::AltModifier)
+        << QKeySequence(Qt::ControlModifier | Qt::Key_Alt)
         << (Events() << std::make_pair(QEvent::KeyPress, Qt::Key_Control)
                      << std::make_pair(QEvent::KeyPress, (Qt::ControlModifier | Qt::Key_Shift).toCombined())
                      << std::make_pair(QEvent::KeyRelease, (Qt::ControlModifier | Qt::Key_Shift).toCombined())
@@ -130,7 +132,7 @@ void ShortcutsTest::testShortcuts_data()
                      << std::make_pair(QEvent::KeyRelease, (Qt::AltModifier | Qt::Key_Control).toCombined()) << std::make_pair(QEvent::KeyRelease, Qt::Key_Alt))
         << true;
     QTest::newRow("modifier-only multiple mods trigger when any mod is released")
-        << QKeySequence(Qt::ControlModifier | Qt::ShiftModifier)
+        << QKeySequence(Qt::ControlModifier | Qt::Key_Shift)
         << (Events() << std::make_pair(QEvent::KeyPress, Qt::Key_Control)
                      << std::make_pair(QEvent::KeyPress, (Qt::ControlModifier | Qt::Key_Shift).toCombined())
                      << std::make_pair(QEvent::KeyRelease, (Qt::ControlModifier | Qt::Key_Shift).toCombined())
@@ -138,18 +140,33 @@ void ShortcutsTest::testShortcuts_data()
                      << std::make_pair(QEvent::KeyRelease, (Qt::AltModifier | Qt::Key_Control).toCombined()) << std::make_pair(QEvent::KeyRelease, Qt::Key_Alt))
         << true;
     QTest::newRow("mod+pointer does not trigger modifier-only single mod")
-        << QKeySequence(Qt::ControlModifier)
+        << QKeySequence(Qt::Key_Control)
         << (Events() << std::make_pair(QEvent::KeyPress, Qt::Key_Control) << std::make_pair(QEvent::MouseButtonPress, Qt::LeftButton)
                      << std::make_pair(QEvent::KeyRelease, Qt::Key_Control))
         << false;
     QTest::newRow("mod+wheel does not trigger modifier-only single mod")
-        << QKeySequence(Qt::ControlModifier)
+        << QKeySequence(Qt::Key_Control)
         << (Events() << std::make_pair(QEvent::KeyPress, Qt::Key_Control) << std::make_pair(QEvent::Wheel, 0)
                      << std::make_pair(QEvent::KeyRelease, Qt::Key_Control))
         << false;
     QTest::newRow("mod+invalid does not trigger modifier-only single mod")
-        << QKeySequence(Qt::ControlModifier)
+        << QKeySequence(Qt::Key_Control)
         << (Events() << std::make_pair(QEvent::KeyPress, Qt::ControlModifier) << std::make_pair(QEvent::KeyRelease, Qt::ControlModifier)) << false;
+    QTest::newRow("shift-backtab matches shift-tab")
+        << QKeySequence(Qt::SHIFT | Qt::Key_Tab)
+        << (Events() << std::make_pair(QEvent::KeyPress, (Qt::SHIFT | Qt::Key_Backtab).toCombined())
+                     << std::make_pair(QEvent::KeyRelease, (Qt::SHIFT | Qt::Key_Backtab).toCombined()))
+        << true;
+    QTest::newRow("normalized multikey suffix after unrelated keys")
+        << QKeySequence(Qt::CTRL | Qt::Key_K, Qt::SHIFT | Qt::Key_Tab)
+        << (Events() << std::make_pair(QEvent::KeyPress, Qt::Key_A) << std::make_pair(QEvent::KeyRelease, Qt::Key_A)
+                     << std::make_pair(QEvent::KeyPress, Qt::Key_B) << std::make_pair(QEvent::KeyRelease, Qt::Key_B)
+                     << std::make_pair(QEvent::KeyPress, Qt::Key_C) << std::make_pair(QEvent::KeyRelease, Qt::Key_C)
+                     << std::make_pair(QEvent::KeyPress, (Qt::CTRL | Qt::Key_K).toCombined())
+                     << std::make_pair(QEvent::KeyRelease, (Qt::CTRL | Qt::Key_K).toCombined())
+                     << std::make_pair(QEvent::KeyPress, (Qt::SHIFT | Qt::Key_Backtab).toCombined())
+                     << std::make_pair(QEvent::KeyRelease, (Qt::SHIFT | Qt::Key_Backtab).toCombined()))
+        << true;
 }
 
 void ShortcutsTest::testShortcuts()
@@ -203,6 +220,8 @@ void ShortcutsTest::testSerialization()
 
     QCOMPARE(Component::keysFromString(QLatin1String("Ctrl+P")), QSet<QKeySequence>() << QKeySequence(Qt::CTRL | Qt::Key_P));
     QCOMPARE(Component::stringFromKeys(QSet<QKeySequence>() << QKeySequence(Qt::CTRL | Qt::Key_P)), QLatin1String("Ctrl+P"));
+
+    QCOMPARE(Component::keysFromString(QLatin1String("Shift+Backtab\tShift+Tab")), QSet<QKeySequence>{QKeySequence(Qt::SHIFT | Qt::Key_Tab)});
 
     QCOMPARE(Component::keysFromString(QLatin1String("\tCtrl+P")), QSet<QKeySequence>() << QKeySequence() << QKeySequence(Qt::CTRL | Qt::Key_P));
     QCOMPARE(Component::keysFromString(QLatin1String("\tCtrl+P\t")), QSet<QKeySequence>() << QKeySequence() << QKeySequence(Qt::CTRL | Qt::Key_P));
@@ -260,6 +279,39 @@ void ShortcutsTest::testComponentPaths()
     QVERIFY(m_globalacceld->allComponents().contains(path));
     QVERIFY(m_globalacceld->unregister(component, action));
     QTRY_VERIFY(!m_globalacceld->allComponents().contains(path));
+}
+
+void ShortcutsTest::testNormalizedShortcuts_data()
+{
+    QTest::addColumn<QKeySequence>("input");
+    QTest::addColumn<QKeySequence>("normalized");
+
+    QTest::newRow("control-only") << QKeySequence(Qt::ControlModifier) << QKeySequence(Qt::Key_Control);
+    QTest::newRow("control-alt-only") << QKeySequence(Qt::ControlModifier | Qt::AltModifier)
+                                      << QKeySequence(Qt::ControlModifier | Qt::Key_Alt);
+    QTest::newRow("shift-backtab") << QKeySequence(Qt::SHIFT | Qt::Key_Backtab) << QKeySequence(Qt::SHIFT | Qt::Key_Tab);
+    QTest::newRow("multikey-backtab") << QKeySequence(Qt::CTRL | Qt::Key_K, Qt::SHIFT | Qt::Key_Backtab)
+                                      << QKeySequence(Qt::CTRL | Qt::Key_K, Qt::SHIFT | Qt::Key_Tab);
+}
+
+void ShortcutsTest::testNormalizedShortcuts()
+{
+    QFETCH(QKeySequence, input);
+    QFETCH(QKeySequence, normalized);
+
+    const QStringList actionId{QStringLiteral("normalization-test"), QStringLiteral("action"), QStringLiteral("Normalization Test"), QStringLiteral("Action")};
+    m_globalacceld->doRegister(actionId);
+    QCOMPARE(
+        m_globalacceld->setShortcutKeys(actionId, {input, normalized}, KGlobalAccelD::NoAutoloading | KGlobalAccelD::SetPresent), QSet<QKeySequence>{normalized});
+    QCOMPARE(m_globalacceld->setShortcutKeys(actionId, {input}, KGlobalAccelD::IsDefault), QSet<QKeySequence>{normalized});
+    QCOMPARE(m_globalacceld->defaultShortcutKeys(actionId), QSet<QKeySequence>{normalized});
+    QCOMPARE(m_globalacceld->actionList(input), actionId);
+    QCOMPARE(m_globalacceld->globalShortcutsByKey(input, KGlobalAccel::Equal).size(), 1);
+    QVERIFY(!m_globalacceld->globalShortcutAvailable(normalized, QStringLiteral("another-component")));
+    const bool inputAvailable = m_globalacceld->globalShortcutAvailable(input, QStringLiteral("another-component"));
+    QVERIFY(m_globalacceld->unregister(actionId[0], actionId[1]));
+    QVERIFY(!inputAvailable);
+    QVERIFY(m_globalacceld->globalShortcutAvailable(input, QStringLiteral("another-component")));
 }
 
 QTEST_MAIN(ShortcutsTest)
