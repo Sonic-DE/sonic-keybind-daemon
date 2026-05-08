@@ -31,12 +31,74 @@ private Q_SLOTS:
     void testComponentPaths();
     void testNormalizedShortcuts_data();
     void testNormalizedShortcuts();
+    void testBacktab_data();
+    void testBacktab();
 
 private:
+    void sendKeyCombination(QKeyCombination keyCombination, ShortcutKeyState state);
+    void sendKeyCombinationPressAndRelease(QKeyCombination keyCombination);
+
     std::unique_ptr<KGlobalAccelD> m_globalacceld;
     KGlobalAccelImpl *m_interface; // implementation of KGlobalAccelInterface * for this test
     KGlobalAccel *m_globalaccel;
 };
+
+void ShortcutsTest::sendKeyCombination(QKeyCombination keyCombination, ShortcutKeyState state)
+{
+    struct {
+        Qt::KeyboardModifier modifier;
+        Qt::Key key;
+    } modifiers[] = {
+        {
+            .modifier = Qt::MetaModifier,
+            .key = Qt::Key_Meta,
+        },
+        {
+            .modifier = Qt::AltModifier,
+            .key = Qt::Key_Alt,
+        },
+        {
+            .modifier = Qt::ControlModifier,
+            .key = Qt::Key_Control,
+        },
+        {
+            .modifier = Qt::ShiftModifier,
+            .key = Qt::Key_Shift,
+        },
+    };
+
+    if (state == ShortcutKeyState::Pressed || state == ShortcutKeyState::Repeated) {
+        Qt::KeyboardModifiers formerModifiers;
+        for (const auto& [modifier, key] : modifiers) {
+            if (keyCombination.keyboardModifiers() & modifier) {
+                m_interface->checkKeyEvent((formerModifiers | key).toCombined(), state);
+                formerModifiers |= modifier;
+            }
+        }
+
+        if (keyCombination.key()) {
+            m_interface->checkKeyEvent(keyCombination.toCombined(), state);
+        }
+    } else {
+        if (keyCombination.key()) {
+            m_interface->checkKeyEvent(keyCombination.toCombined(), state);
+        }
+
+        Qt::KeyboardModifiers formerModifiers = keyCombination.keyboardModifiers();
+        for (const auto& [modifier, key] : modifiers) {
+            if (formerModifiers & modifier) {
+                formerModifiers &= ~modifier;
+                m_interface->checkKeyEvent((formerModifiers | key).toCombined(), state);
+            }
+        }
+    }
+}
+
+void ShortcutsTest::sendKeyCombinationPressAndRelease(QKeyCombination keyCombination)
+{
+    sendKeyCombination(keyCombination, ShortcutKeyState::Pressed);
+    sendKeyCombination(keyCombination, ShortcutKeyState::Released);
+}
 
 void ShortcutsTest::initTestCase()
 {
@@ -221,7 +283,7 @@ void ShortcutsTest::testSerialization()
     QCOMPARE(Component::keysFromString(QLatin1String("Ctrl+P")), QSet<QKeySequence>() << QKeySequence(Qt::CTRL | Qt::Key_P));
     QCOMPARE(Component::stringFromKeys(QSet<QKeySequence>() << QKeySequence(Qt::CTRL | Qt::Key_P)), QLatin1String("Ctrl+P"));
 
-    QCOMPARE(Component::keysFromString(QLatin1String("Shift+Backtab\tShift+Tab")), QSet<QKeySequence>{QKeySequence(Qt::SHIFT | Qt::Key_Tab)});
+    QCOMPARE(Component::keysFromString(QLatin1String("Backtab\tShift+Backtab\tShift+Tab")), QSet<QKeySequence>{QKeySequence(Qt::SHIFT | Qt::Key_Tab)});
 
     QCOMPARE(Component::keysFromString(QLatin1String("\tCtrl+P")), QSet<QKeySequence>() << QKeySequence() << QKeySequence(Qt::CTRL | Qt::Key_P));
     QCOMPARE(Component::keysFromString(QLatin1String("\tCtrl+P\t")), QSet<QKeySequence>() << QKeySequence() << QKeySequence(Qt::CTRL | Qt::Key_P));
@@ -242,18 +304,14 @@ void ShortcutsTest::testContestedKeys()
     QVERIFY(KGlobalAccel::setGlobalShortcut(secondAction.get(), shortcut));
     QSignalSpy secondActionTriggeredSpy(secondAction.get(), &QAction::triggered);
 
-    m_interface->checkKeyEvent(Qt::Key_Meta, ShortcutKeyState::Pressed);
-    m_interface->checkKeyEvent((Qt::MetaModifier | Qt::Key_Control).toCombined(), ShortcutKeyState::Pressed);
-    m_interface->checkKeyEvent((Qt::MetaModifier | Qt::ControlModifier | Qt::Key_K).toCombined(), ShortcutKeyState::Pressed);
+    sendKeyCombination(Qt::MetaModifier | Qt::ControlModifier | Qt::Key_K, ShortcutKeyState::Pressed);
 
     QVERIFY(firstActionTriggeredSpy.wait());
     QCOMPARE(firstActionTriggeredSpy.count(), 1);
     QVERIFY(!secondActionTriggeredSpy.wait(100));
     QCOMPARE(secondActionTriggeredSpy.count(), 0);
 
-    m_interface->checkKeyEvent((Qt::MetaModifier | Qt::ControlModifier | Qt::Key_K).toCombined(), ShortcutKeyState::Released);
-    m_interface->checkKeyEvent((Qt::MetaModifier | Qt::Key_Control).toCombined(), ShortcutKeyState::Released);
-    m_interface->checkKeyEvent(Qt::Key_Meta, ShortcutKeyState::Released);
+    sendKeyCombination(Qt::MetaModifier | Qt::ControlModifier | Qt::Key_K, ShortcutKeyState::Released);
 
     m_globalaccel->removeAllShortcuts(firstAction.get());
     m_globalaccel->removeAllShortcuts(secondAction.get());
@@ -290,8 +348,12 @@ void ShortcutsTest::testNormalizedShortcuts_data()
     QTest::newRow("control-alt-only") << QKeySequence(Qt::ControlModifier | Qt::AltModifier)
                                       << QKeySequence(Qt::ControlModifier | Qt::Key_Alt);
     QTest::newRow("shift-backtab") << QKeySequence(Qt::SHIFT | Qt::Key_Backtab) << QKeySequence(Qt::SHIFT | Qt::Key_Tab);
+    QTest::newRow("bare-backtab") << QKeySequence(Qt::Key_Backtab) << QKeySequence(Qt::SHIFT | Qt::Key_Tab);
+    QTest::newRow("control-backtab") << QKeySequence(Qt::CTRL | Qt::Key_Backtab) << QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_Tab);
     QTest::newRow("multikey-backtab") << QKeySequence(Qt::CTRL | Qt::Key_K, Qt::SHIFT | Qt::Key_Backtab)
                                       << QKeySequence(Qt::CTRL | Qt::Key_K, Qt::SHIFT | Qt::Key_Tab);
+    QTest::newRow("multikey-bare-backtab") << QKeySequence(Qt::CTRL | Qt::Key_K, Qt::Key_Backtab)
+                                           << QKeySequence(Qt::CTRL | Qt::Key_K, Qt::SHIFT | Qt::Key_Tab);
 }
 
 void ShortcutsTest::testNormalizedShortcuts()
@@ -312,6 +374,53 @@ void ShortcutsTest::testNormalizedShortcuts()
     QVERIFY(m_globalacceld->unregister(actionId[0], actionId[1]));
     QVERIFY(!inputAvailable);
     QVERIFY(m_globalacceld->globalShortcutAvailable(input, QStringLiteral("another-component")));
+}
+
+void ShortcutsTest::testBacktab_data()
+{
+    QTest::addColumn<QKeySequence>("shortcut");
+
+    QTest::addRow("Shift+Tab") << QKeySequence(Qt::ShiftModifier | Qt::Key_Tab);
+    QTest::addRow("Backtab") << QKeySequence(Qt::Key_Backtab);
+    QTest::addRow("Shift+Backtab") << QKeySequence(Qt::ShiftModifier | Qt::Key_Backtab);
+}
+
+void ShortcutsTest::testBacktab()
+{
+    QFETCH(QKeySequence, shortcut);
+
+    auto action = std::make_unique<QAction>();
+    action->setObjectName(QStringLiteral("Backtab Shortcut"));
+    QVERIFY(KGlobalAccel::setGlobalShortcut(action.get(), shortcut));
+    QSignalSpy actionTriggeredSpy(action.get(), &QAction::triggered);
+
+    // Shift+Tab should be treated as Backtab or Shift+Backtab. Note that Tab should not treated as Backtab.
+    sendKeyCombinationPressAndRelease(Qt::Key_Tab);
+    QVERIFY(!actionTriggeredSpy.wait(100));
+
+    sendKeyCombinationPressAndRelease(Qt::ShiftModifier | Qt::Key_Tab);
+    QVERIFY(actionTriggeredSpy.wait());
+
+    sendKeyCombinationPressAndRelease(Qt::MetaModifier | Qt::Key_Tab);
+    QVERIFY(!actionTriggeredSpy.wait(100));
+
+    sendKeyCombinationPressAndRelease(Qt::MetaModifier | Qt::ShiftModifier | Qt::Key_Tab);
+    QVERIFY(!actionTriggeredSpy.wait(100));
+
+    // Backtab and Shift+Backtab should be treated as Shift+Tab.
+    sendKeyCombinationPressAndRelease(Qt::Key_Backtab);
+    QVERIFY(actionTriggeredSpy.wait());
+
+    sendKeyCombinationPressAndRelease(Qt::ShiftModifier | Qt::Key_Backtab);
+    QVERIFY(actionTriggeredSpy.wait());
+
+    sendKeyCombinationPressAndRelease(Qt::MetaModifier | Qt::Key_Backtab);
+    QVERIFY(!actionTriggeredSpy.wait(100));
+
+    sendKeyCombinationPressAndRelease(Qt::MetaModifier | Qt::ShiftModifier | Qt::Key_Backtab);
+    QVERIFY(!actionTriggeredSpy.wait(100));
+
+    m_globalaccel->removeAllShortcuts(action.get());
 }
 
 QTEST_MAIN(ShortcutsTest)
