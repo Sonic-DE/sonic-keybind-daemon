@@ -212,18 +212,18 @@ bool KGlobalAccelD::init()
     d->writeoutTimer.setSingleShot(true);
     connect(&d->writeoutTimer, &QTimer::timeout, d->m_registry.get(), &GlobalShortcutsRegistry::writeSettings);
 
-    if (!QDBusConnection::sessionBus().registerService(QLatin1String("org.kde.kglobalaccel"))) {
-        qCWarning(KGLOBALACCELD) << "Failed to register service org.kde.kglobalaccel";
-        return false;
-    }
+    d->m_registry->setDBusPath(QDBusObjectPath("/"));
+    d->m_registry->loadSettings();
 
     if (!QDBusConnection::sessionBus().registerObject(QStringLiteral("/kglobalaccel"), this, QDBusConnection::ExportScriptableContents)) {
         qCWarning(KGLOBALACCELD) << "Failed to register object kglobalaccel in org.kde.kglobalaccel";
         return false;
     }
 
-    d->m_registry->setDBusPath(QDBusObjectPath("/"));
-    d->m_registry->loadSettings();
+    if (!QDBusConnection::sessionBus().registerService(QLatin1String("org.kde.kglobalaccel"))) {
+        qCWarning(KGLOBALACCELD) << "Failed to register service org.kde.kglobalaccel";
+        return false;
+    }
 
     return true;
 }
