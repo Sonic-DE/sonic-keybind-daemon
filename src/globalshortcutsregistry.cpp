@@ -415,13 +415,9 @@ GlobalShortcut *GlobalShortcutsRegistry::activeShortcutByKey(const QKeySequence 
             }
         }
     } else {
-        // TODO: Ensure that we operate with normalized keys so the lookup time can be O(1) on average instead of O(N).
-        const QKeySequence normalizedKeySequence = Utils::normalizeSequence(keySequence);
-        for (const auto &[candidateKeySequence, shortcut] : _active_keys.asKeyValueRange()) {
-            const QKeySequence normalizedCandidateKeySequence = Utils::normalizeSequence(candidateKeySequence);
-            if (normalizedKeySequence == normalizedCandidateKeySequence) {
-                shortcuts.append(shortcut);
-            }
+        const auto range = _active_keys.equal_range(keySequence);
+        for (auto it = range.first; it != range.second; ++it) {
+            shortcuts.append(*it);
         }
     }
 
@@ -556,17 +552,20 @@ bool GlobalShortcutsRegistry::processKey(int keyQt, ShortcutKeyState state)
 
     _active_sequence = QKeySequence(keys[0], keys[1], keys[2], keys[3]);
 
+    // The active sequence comes from the user, so it should be normalized.
+    const QKeySequence normalizedSequence = Utils::normalizeSequence(_active_sequence);
+
     GlobalShortcut *shortcut = nullptr;
-    QKeySequence tempSequence;
-    for (int length = 1; length <= _active_sequence.count(); length++) {
+    for (int length = 1; length <= normalizedSequence.count(); length++) {
         // We have to check all possible matches from the end since we're rotating active sequence
         // instead of cleaning it when it's full
         int sequenceToCheck[maxSequenceLength] = {0, 0, 0, 0};
         for (int i = 0; i < length; i++) {
-            sequenceToCheck[i] = _active_sequence[_active_sequence.count() - length + i].toCombined();
+            sequenceToCheck[i] = normalizedSequence[normalizedSequence.count() - length + i].toCombined();
         }
-        tempSequence = QKeySequence(sequenceToCheck[0], sequenceToCheck[1], sequenceToCheck[2], sequenceToCheck[3]);
-        shortcut = activeShortcutByKey(tempSequence);
+
+        const QKeySequence rotatedSequence(sequenceToCheck[0], sequenceToCheck[1], sequenceToCheck[2], sequenceToCheck[3]);
+        shortcut = activeShortcutByKey(rotatedSequence);
 
         if (shortcut) {
             break;

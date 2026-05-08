@@ -16,6 +16,7 @@
 #include "kglobalaccel.h"
 #include "kserviceactioncomponent.h"
 #include "logging.h"
+#include "sequencehelpers_p.h"
 
 #include <QDBusConnection>
 #include <QDBusMetaType>
@@ -252,7 +253,7 @@ QStringList KGlobalAccelD::action(int key) const
 
 QStringList KGlobalAccelD::actionList(const QKeySequence &key) const
 {
-    QList<GlobalShortcut *> shortcuts = d->m_registry->getShortcutsByKey(key);
+    QList<GlobalShortcut *> shortcuts = d->m_registry->getShortcutsByKey(Utils::normalizeSequence(key));
     if (shortcuts.isEmpty()) {
         return {};
     }
@@ -393,7 +394,7 @@ QList<KGlobalShortcutInfo> KGlobalAccelD::getGlobalShortcutsByKey(int key) const
 QList<KGlobalShortcutInfo> KGlobalAccelD::globalShortcutsByKey(const QKeySequence &key, KGlobalAccel::MatchType type) const
 {
     qCDebug(KGLOBALACCELD) << key;
-    const QList<GlobalShortcut *> shortcuts = d->m_registry->getShortcutsByKey(key, type);
+    const QList<GlobalShortcut *> shortcuts = d->m_registry->getShortcutsByKey(Utils::normalizeSequence(key), type);
 
     QList<KGlobalShortcutInfo> rc;
     rc.reserve(shortcuts.size());
@@ -417,7 +418,7 @@ bool KGlobalAccelD::globalShortcutAvailable(const QKeySequence &shortcut, const 
     QString realComponent = component;
     QString context;
     d->splitComponent(realComponent, context);
-    return d->m_registry->isShortcutAvailable(shortcut, realComponent, context);
+    return d->m_registry->isShortcutAvailable(Utils::normalizeSequence(shortcut), realComponent, context);
 }
 
 void KGlobalAccelD::setInactive(const QStringList &actionId)
@@ -489,13 +490,15 @@ QSet<QKeySequence> KGlobalAccelD::setShortcutKeys(const QStringList &actionId, c
         return QSet<QKeySequence>();
     }
 
+    const QSet<QKeySequence> normalizedKeys = Utils::normalizeSequences(keys);
+
     // default shortcuts cannot clash because they don't do anything
     if (isDefault) {
-        if (shortcut->defaultKeys() != keys) {
-            shortcut->setDefaultKeys(keys);
+        if (shortcut->defaultKeys() != normalizedKeys) {
+            shortcut->setDefaultKeys(normalizedKeys);
             scheduleWriteSettings();
         }
-        return keys; // doesn't matter
+        return normalizedKeys; // doesn't matter
     }
 
     if (isAutoloading && !shortcut->isFresh()) {
@@ -509,7 +512,7 @@ QSet<QKeySequence> KGlobalAccelD::setShortcutKeys(const QStringList &actionId, c
     }
 
     // now we are actually changing the shortcut of the action
-    shortcut->setKeys(keys);
+    shortcut->setKeys(normalizedKeys);
 
     if (setPresent) {
         shortcut->setIsPresent(true);
