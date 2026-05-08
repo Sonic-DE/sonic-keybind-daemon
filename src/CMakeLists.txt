@@ -29,7 +29,6 @@ ecm_qt_declare_logging_category(KGlobalAccelD
    HEADER logging.h
    IDENTIFIER KGLOBALACCELD
    CATEGORY_NAME kf.globalaccel.kglobalacceld
-   DEFAULT_SEVERITY Warning
    DESCRIPTION "KGlobalAccelD"
    EXPORT KGLOBALACCELD
    )
