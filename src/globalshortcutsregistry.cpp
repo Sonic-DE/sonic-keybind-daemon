@@ -83,11 +83,6 @@ static KGlobalAccelInterface *loadPlugin(GlobalShortcutsRegistry *parent)
     return nullptr;
 }
 
-static QString getConfigFile()
-{
-    return qEnvironmentVariableIsSet("KGLOBALACCEL_TEST_MODE") ? QString() : QStringLiteral("kglobalshortcutsrc");
-}
-
 void GlobalShortcutsRegistry::migrateKHotkeys()
 {
     KConfig hotkeys(QStringLiteral("khotkeysrc"));
@@ -282,7 +277,7 @@ void GlobalShortcutsRegistry::migrateConfig()
 GlobalShortcutsRegistry::GlobalShortcutsRegistry()
     : QObject()
     , _manager(loadPlugin(this))
-    , _config(getConfigFile(), KConfig::SimpleConfig)
+    , _config(QStringLiteral("kglobalshortcutsrc"), KConfig::SimpleConfig, QStandardPaths::GenericConfigLocation)
     , _state(QStringLiteral("kglobalshortcutsstaterc"), KConfig::SimpleConfig, QStandardPaths::GenericStateLocation)
 {
     migrateKHotkeys();
