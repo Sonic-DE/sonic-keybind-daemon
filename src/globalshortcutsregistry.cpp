@@ -773,7 +773,7 @@ void GlobalShortcutsRegistry::loadSettings()
         Component *component = createServiceActionComponent(groupName);
 
         if (!component) {
-            qDebug() << "could not create a component for " << groupName;
+            qCWarning(KGLOBALACCELD) << "could not create a component for" << groupName;
             continue;
         }
         Q_ASSERT(!component->uniqueName().isEmpty());
