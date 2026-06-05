@@ -27,6 +27,8 @@ private Q_SLOTS:
     void testShortcuts();
     void testSerialization();
     void testContestedKeys();
+    void testComponentPaths_data();
+    void testComponentPaths();
 
 private:
     std::unique_ptr<KGlobalAccelD> m_globalacceld;
@@ -236,6 +238,28 @@ void ShortcutsTest::testContestedKeys()
 
     m_globalaccel->removeAllShortcuts(firstAction.get());
     m_globalaccel->removeAllShortcuts(secondAction.get());
+}
+
+void ShortcutsTest::testComponentPaths_data()
+{
+    QTest::addColumn<QString>("component");
+    QTest::addColumn<QString>("expectedPath");
+    QTest::newRow("simple") << QStringLiteral("path_test") << QStringLiteral("/component/path_test");
+    QTest::newRow("punctuation") << QStringLiteral("path.test-app") << QStringLiteral("/component/path_test_app");
+    QTest::newRow("slash-and-space") << QStringLiteral("path/test app") << QStringLiteral("/component/path_test_app");
+}
+
+void ShortcutsTest::testComponentPaths()
+{
+    QFETCH(QString, component);
+    QFETCH(QString, expectedPath);
+    const QString action = QStringLiteral("path-test-action");
+    m_globalacceld->doRegister({component, action, component, action});
+    const QDBusObjectPath path = m_globalacceld->getComponent(component);
+    QCOMPARE(path.path(), expectedPath);
+    QVERIFY(m_globalacceld->allComponents().contains(path));
+    QVERIFY(m_globalacceld->unregister(component, action));
+    QTRY_VERIFY(!m_globalacceld->allComponents().contains(path));
 }
 
 QTEST_MAIN(ShortcutsTest)
