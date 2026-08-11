@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 
 project(kglobalacceld)
 
-set(PROJECT_VERSION "6.7.5")
+set(PROJECT_VERSION "6.7.80")
 
 set(QT_MIN_VERSION "6.10.0")
 set(KF6_MIN_VERSION "6.27.0")
@@ -41,7 +41,7 @@ set(EXCLUDE_DEPRECATED_BEFORE_AND_AT 0 CACHE STRING "Control the range of deprec
 find_package(Qt6 ${QT_MIN_VERSION} CONFIG REQUIRED DBus Gui Widgets)
 
 if (Qt6Gui_VERSION VERSION_GREATER_EQUAL "6.10.0")
-    find_package(Qt6GuiPrivate ${REQUIRED_QT_VERSION} REQUIRED NO_MODULE)
+    find_package(Qt6GuiPrivate ${Qt6Gui_VERSION} EXACT REQUIRED NO_MODULE)
 endif()
 
 find_package(KF6Config ${KF6_MIN_VERSION} REQUIRED)
@@ -54,11 +54,10 @@ find_package(KF6Service ${KF6_MIN_VERSION} REQUIRED)
 find_package(KF6KIO ${KF6_MIN_VERSION} REQUIRED)
 find_package(KF6JobWidgets ${KF6_MIN_VERSION} REQUIRED)
 
-
 option(WITH_X11 "Build with X11 support." ON)
 
 if(WITH_X11)
-    find_package(XCB MODULE COMPONENTS XCB KEYSYMS XKB RECORD OPTIONAL_COMPONENTS XTEST)
+    find_package(XCB REQUIRED MODULE COMPONENTS XCB KEYSYMS XKB RECORD OPTIONAL_COMPONENTS XTEST)
     set_package_properties(XCB PROPERTIES DESCRIPTION "X protocol C-language Binding"
                         TYPE REQUIRED
                         )
@@ -79,8 +78,8 @@ ecm_setup_version(PROJECT VARIABLE_PREFIX KGLOBALACCELD
                         SOVERSION 0)
 
 ecm_set_disabled_deprecation_versions(
-    QT 6.9.0
-    KF 6.16.0
+    QT 6.11.0
+    KF 6.29.0
 )
 
 add_subdirectory(src)
