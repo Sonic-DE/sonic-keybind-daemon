@@ -4,6 +4,8 @@
     SPDX-License-Identifier: LGPL-2.0-or-later
 */
 
+#include <QScopeGuard>
+#include <QTemporaryDir>
 #include <QTest>
 
 #include "globalshortcutsregistry.h"
@@ -38,7 +40,19 @@ private Q_SLOTS:
     void testMigrate()
     {
         QStandardPaths::setTestModeEnabled(true);
-        qunsetenv("XDG_DATA_DIRS");
+        QTemporaryDir systemDataDir;
+        QVERIFY(systemDataDir.isValid());
+        const bool dataDirsWasSet = qEnvironmentVariableIsSet("XDG_DATA_DIRS");
+        const QByteArray originalDataDirs = qgetenv("XDG_DATA_DIRS");
+        const auto restoreDataDirs = qScopeGuard([dataDirsWasSet, originalDataDirs] {
+            if (dataDirsWasSet) {
+                qputenv("XDG_DATA_DIRS", originalDataDirs);
+            } else {
+                qunsetenv("XDG_DATA_DIRS");
+            }
+        });
+        // An unset XDG_DATA_DIRS falls back to system paths even in test mode.
+        QVERIFY(qputenv("XDG_DATA_DIRS", QFile::encodeName(systemDataDir.path())));
 
         QDir configDir(QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation));
         configDir.mkpath(QStringLiteral("."));
