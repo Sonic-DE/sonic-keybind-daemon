@@ -53,6 +53,7 @@ find_package(KF6GlobalAccel ${KF6_MIN_VERSION} REQUIRED)
 find_package(KF6Service ${KF6_MIN_VERSION} REQUIRED)
 find_package(KF6KIO ${KF6_MIN_VERSION} REQUIRED)
 find_package(KF6JobWidgets ${KF6_MIN_VERSION} REQUIRED)
+find_package(SonicLogging ${KF6_MIN_VERSION} REQUIRED)
 
 option(WITH_X11 "Build with X11 support." ON)
 

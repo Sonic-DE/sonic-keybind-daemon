@@ -15,6 +15,7 @@
 
 #include <QKeySequence>
 #include <QStringList>
+#include <Sonic/Logging/Logging>
 
 #if HAVE_X11
 #include <private/qtx11extras_p.h>
@@ -279,7 +280,14 @@ GlobalShortcut *Component::registerShortcut(const QString &uniqueName,
     }
 
     GlobalShortcut *shortcut = new GlobalShortcut(uniqueName, friendlyName, serial, currentContext(), _registry);
-    shortcut->setKeys(keysFromString(shortcutString));
+    const QSet<QKeySequence> keys = keysFromString(shortcutString);
+    // QKeySequence::fromString() gives a non-empty sequence with no text for an unknown key, and it is saved blank.
+    if (std::any_of(keys.cbegin(), keys.cend(), [](const QKeySequence& key) {
+            return key.toString(QKeySequence::PortableText).isEmpty();
+        })) {
+        sonicWarning() << "Shortcut" << _uniqueName << uniqueName << "lost its keys: could not parse the saved value" << shortcutString;
+    }
+    shortcut->setKeys(keys);
     shortcut->setDefaultKeys(keysFromString(defaultShortcutString));
     shortcut->setIsFresh(false);
     return shortcut;

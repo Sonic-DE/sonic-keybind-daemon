@@ -46,6 +46,7 @@ target_link_libraries(KGlobalAccelD
         KF6::Service
         KF6::KIOGui
         KF6::JobWidgets
+        Sonic::Logging
 )
 
 set_target_properties(KGlobalAccelD PROPERTIES VERSION ${KGLOBALACCELD_VERSION}
@@ -67,6 +68,7 @@ target_link_libraries(kglobalacceld
     KGlobalAccelD
     KF6::CoreAddons
     KF6::DBusAddons   # KDBusService
+    Sonic::Logging
     )
 
 add_subdirectory(plugins)

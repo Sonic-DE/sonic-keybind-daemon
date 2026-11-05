@@ -19,9 +19,14 @@
 #include "sequencehelpers_p.h"
 
 #include <QDBusConnection>
+#include <QDBusConnectionInterface>
 #include <QDBusMetaType>
+#include <QFile>
 #include <QMetaMethod>
 #include <QTimer>
+#include <Sonic/Logging/Logging>
+
+SONIC_LOGGING_COMPONENT("org.sonicde.keybinddaemon")
 
 QDBusArgument &operator<<(QDBusArgument &argument, const QSet<QKeySequence> &sequences)
 {
@@ -512,7 +517,21 @@ QSet<QKeySequence> KGlobalAccelD::setShortcutKeys(const QStringList &actionId, c
     }
 
     // now we are actually changing the shortcut of the action
+    const QSet<QKeySequence> previousKeys = shortcut->keys();
     shortcut->setKeys(normalizedKeys);
+
+    if (!previousKeys.isEmpty() && normalizedKeys.isEmpty()) {
+        QString caller = QStringLiteral("the daemon");
+        if (calledFromDBus()) {
+            const QString service = message().service();
+            const uint pid = connection().interface()->servicePid(service);
+            QFile commandLine(QStringLiteral("/proc/%1/cmdline").arg(pid));
+            const QByteArray command = commandLine.open(QIODevice::ReadOnly) ? commandLine.readAll().replace('\0', ' ').trimmed() : QByteArray();
+            caller = QStringLiteral("%1 pid %2 (%3)").arg(service).arg(pid).arg(QString::fromLocal8Bit(command));
+        }
+        sonicWarning() << "Shortcut" << actionId.at(KGlobalAccel::ComponentUnique) << actionId.at(KGlobalAccel::ActionUnique) << "lost its keys"
+                       << previousKeys << "flags" << flags << "requested by" << caller;
+    }
 
     if (setPresent) {
         shortcut->setIsPresent(true);

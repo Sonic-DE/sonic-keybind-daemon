@@ -14,6 +14,7 @@
 #include <KDBusService>
 #include <QCommandLineParser>
 #include <QGuiApplication>
+#include <Sonic/Logging/Logging>
 
 int main(int argc, char **argv)
 {
@@ -22,6 +23,8 @@ int main(int argc, char **argv)
     if (qEnvironmentVariable("XDG_SESSION_TYPE") == QLatin1String("wayland")) {
         return 0;
     }
+
+    Sonic::Logging::install();
 
     QCoreApplication::setAttribute(Qt::AA_DisableSessionManager);
 
