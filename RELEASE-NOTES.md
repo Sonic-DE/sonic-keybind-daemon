@@ -2,9 +2,10 @@
 
 The background service that makes your system-wide keyboard shortcuts work in SonicDE, whichever app you are in.
 
-## Unreleased
+## 6.8.2 (2026-11-10)
 
 - Now presents itself with SonicDE names and identity throughout the desktop.
+- Behind the scenes: the shortcut service now keeps a log, which records which program cleared a shortcut's keys.
 
 ## 6.8.0 (2026-10-20)
 
