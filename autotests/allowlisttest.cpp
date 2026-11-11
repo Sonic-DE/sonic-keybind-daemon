@@ -71,6 +71,7 @@ void AllowListTest::testAllowList()
     QDir().mkpath(configDir);
     QFile::remove(configDir + QLatin1String("/kglobalaccelrc"));
     QFile::remove(configDir + QLatin1String("/kglobalshortcutsrc"));
+    QFile::remove(configDir + QLatin1String("/sonicglobalshortcutsrc"));
 
     QFile config(configDir + QLatin1String("/kglobalaccelrc"));
     QVERIFY(config.open(QIODevice::WriteOnly | QIODevice::Truncate));
@@ -129,6 +130,7 @@ void AllowListTest::testAllowListMultipleActions()
     QDir().mkpath(configDir);
     QFile::remove(configDir + QLatin1String("/kglobalaccelrc"));
     QFile::remove(configDir + QLatin1String("/kglobalshortcutsrc"));
+    QFile::remove(configDir + QLatin1String("/sonicglobalshortcutsrc"));
 
     QFile config(configDir + QLatin1String("/kglobalaccelrc"));
     QVERIFY(config.open(QIODevice::WriteOnly | QIODevice::Truncate));

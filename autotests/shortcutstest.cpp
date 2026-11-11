@@ -145,8 +145,11 @@ void ShortcutsTest::initTestCase()
 {
     QStandardPaths::setTestModeEnabled(true);
 
-    if (const QString filePath = QStandardPaths::locate(QStandardPaths::ConfigLocation, QStringLiteral("kglobalshortcutsrc")); !filePath.isEmpty()) {
-        QFile::remove(filePath);
+    // kglobalaccelrc: allowlisttest leaves its allow-list behind, which would block these actions.
+    for (const auto name : {QStringLiteral("kglobalaccelrc"), QStringLiteral("kglobalshortcutsrc"), QStringLiteral("sonicglobalshortcutsrc")}) {
+        if (const QString filePath = QStandardPaths::locate(QStandardPaths::ConfigLocation, name); !filePath.isEmpty()) {
+            QFile::remove(filePath);
+        }
     }
 
     qputenv("KGLOBALACCELD_PLATFORM", "dummy");

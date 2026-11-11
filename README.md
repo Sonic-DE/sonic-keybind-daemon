@@ -62,7 +62,9 @@ useAllowList=false
 
 It may be helpful to reference the component and shortcut names from existing
 shortcuts you have configured in your system by examining
-`~/.config/kglobalshortcutsrc`.
+`~/.config/sonicglobalshortcutsrc`. On its first start the daemon copies KDE's
+`kglobalshortcutsrc` and `kglobalshortcutsstaterc` into its own files, and removes
+the `sonicshell` group SonicDE 6.8.2 left in KDE's.
 
 ## Development
 

@@ -27,10 +27,13 @@
 
 #include <QDBusConnection>
 #include <QDir>
+#include <QFile>
+#include <QFileInfo>
 #include <QGuiApplication>
 #include <QJsonArray>
 #include <QPluginLoader>
 #include <QStandardPaths>
+#include <Sonic/Logging/Logging>
 
 #include <algorithm>
 
@@ -82,6 +85,52 @@ static KGlobalAccelInterface *loadPlugin(GlobalShortcutsRegistry *parent)
 
     qCWarning(KGLOBALACCELD) << "Could not find any platform plugin";
     return nullptr;
+}
+
+static void importKdeFile(QStandardPaths::StandardLocation location, const QString& kdeName, const QString& sonicName)
+{
+    const QString dir = QStandardPaths::writableLocation(location);
+    const QString sonicPath = dir + u'/' + sonicName;
+    const QString kdePath = dir + u'/' + kdeName;
+    if (QFileInfo::exists(sonicPath) || !QFileInfo::exists(kdePath)) {
+        return;
+    }
+    if (!QDir().mkpath(dir) || !QFile::copy(kdePath, sonicPath)) {
+        sonicWarning() << "Could not copy" << kdePath << "to" << sonicPath;
+        return;
+    }
+
+    // The shell was plasmashell before; a sonicshell group already there is newer.
+    KConfig config(sonicPath, KConfig::SimpleConfig);
+    KConfigGroup old = config.group(u"plasmashell"_s);
+    if (old.exists()) {
+        if (!config.hasGroup(u"sonicshell"_s)) {
+            KConfigGroup shell = config.group(u"sonicshell"_s);
+            old.copyTo(&shell);
+        }
+        old.deleteGroup();
+    }
+    if (!config.sync()) {
+        sonicWarning() << "Could not write" << sonicPath;
+        return;
+    }
+
+    // SonicDE 6.8.2 wrote its shell's group into KDE's file; take it back out.
+    KConfig kde(kdePath, KConfig::SimpleConfig);
+    if (kde.hasGroup(u"sonicshell"_s)) {
+        kde.deleteGroup(u"sonicshell"_s);
+        if (!kde.sync()) {
+            sonicWarning() << "Could not remove the sonicshell group from" << kdePath;
+        }
+    }
+}
+
+// SonicDE keeps its own shortcut files beside KDE's.
+static QString sonicConfigName()
+{
+    importKdeFile(QStandardPaths::GenericConfigLocation, u"kglobalshortcutsrc"_s, u"sonicglobalshortcutsrc"_s);
+    importKdeFile(QStandardPaths::GenericStateLocation, u"kglobalshortcutsstaterc"_s, u"sonicglobalshortcutsstaterc"_s);
+    return u"sonicglobalshortcutsrc"_s;
 }
 
 void GlobalShortcutsRegistry::migrateKHotkeys()
@@ -283,8 +332,8 @@ GlobalShortcutsRegistry::GlobalShortcutsRegistry()
 GlobalShortcutsRegistry::GlobalShortcutsRegistry(std::unique_ptr<KGlobalAccelInterface> interface)
     : QObject()
     , _manager(interface ? interface.get() : loadPlugin(this))
-    , _config(QStringLiteral("kglobalshortcutsrc"), KConfig::SimpleConfig, QStandardPaths::GenericConfigLocation)
-    , _state(QStringLiteral("kglobalshortcutsstaterc"), KConfig::SimpleConfig, QStandardPaths::GenericStateLocation)
+    , _config(sonicConfigName(), KConfig::SimpleConfig, QStandardPaths::GenericConfigLocation)
+    , _state(u"sonicglobalshortcutsstaterc"_s, KConfig::SimpleConfig, QStandardPaths::GenericStateLocation)
 {
     if (interface) {
         interface->setRegistry(this);

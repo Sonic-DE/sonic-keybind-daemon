@@ -79,7 +79,7 @@ struct KGlobalAccelDPrivate {
         }
     }
 
-    //! Timer for delayed writing to kglobalshortcutsrc
+    //! Timer for delayed writing to sonicglobalshortcutsrc
     QTimer writeoutTimer;
 
     //! Our holder

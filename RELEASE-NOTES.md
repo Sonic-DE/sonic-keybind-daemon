@@ -2,6 +2,11 @@
 
 The background service that makes your system-wide keyboard shortcuts work in SonicDE, whichever app you are in.
 
+## Unreleased
+
+- Keyboard shortcuts of the desktop shell, such as Meta+V for clipboard history and Alt+F1 for the launcher, work again after upgrading to 6.8.2.
+- SonicDE keeps its keyboard shortcuts in its own settings file, so changing them no longer affects KDE Plasma installed on the same computer. Your shortcuts are copied over once, and the SonicDE entries that 6.8.2 added to KDE Plasma's shortcut settings are removed.
+
 ## 6.8.2 (2026-11-10)
 
 - Now presents itself with SonicDE names and identity throughout the desktop.

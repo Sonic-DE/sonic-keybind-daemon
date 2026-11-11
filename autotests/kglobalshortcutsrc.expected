@@ -235,7 +235,7 @@ Toggle Keyboard Backlight=Keyboard Light On/Off,Keyboard Light On/Off,Hintergrun
 Turn Off Screen=none,none,Bildschirm ausschalten
 _k_friendly_name=Energieverwaltung
 
-[plasmashell]
+[sonicshell]
 _k_friendly_name=Plasma
 activate task manager entry 1=Meta+1,Meta+1,Fensterleisteneintrag 1 aktivieren
 activate task manager entry 10=none,Meta+0,Fensterleisteneintrag 10 aktivieren
